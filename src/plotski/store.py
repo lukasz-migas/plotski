@@ -1,33 +1,32 @@
 """Bokeh plot store"""
 # Standard library imports
-import os
 import math
+import os
 import webbrowser
 from typing import List
 
 # Third-party imports
 import numpy as np
 from bokeh.io import save
+from bokeh.layouts import column, gridplot, row
 from bokeh.models import ColumnDataSource
-from bokeh.layouts import row
-from bokeh.layouts import column
-from bokeh.layouts import gridplot
-from bokeh.models.widgets import Tabs
-from bokeh.models.widgets import Panel
+from bokeh.models.widgets import Panel, Tabs
+
+from .heatmap import PlotImage, PlotImageRGBA
+from .plot import Plot
+from .scatter import PlotScatter
+from .spectrum import (
+    PlotButterflyMassSpectrum,
+    PlotButterflyMobilogram,
+    PlotCentroidMassSpectrum,
+    PlotMassSpectrum,
+    PlotMobilogram,
+    PlotMultiLine,
+    PlotSpectrum,
+)
 
 # Local imports
 from .utilities import get_unique_str
-from .heatmap import PlotImage
-from .heatmap import PlotImageRGBA
-from .plot import Plot
-from .scatter import PlotScatter
-from .spectrum import PlotSpectrum
-from .spectrum import PlotMultiLine
-from .spectrum import PlotMobilogram
-from .spectrum import PlotMassSpectrum
-from .spectrum import PlotButterflyMobilogram
-from .spectrum import PlotCentroidMassSpectrum
-from .spectrum import PlotButterflyMassSpectrum
 
 # TODO: add repr that shows the layout of the store e.g. tab 1 \ plot 1 plot 2 plot 3; tab 2 \ plot 1 plot 2 plot 3
 # TODO: add option to annotate spectrum and heatmap with rois and/or peaks

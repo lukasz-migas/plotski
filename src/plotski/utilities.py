@@ -1,6 +1,7 @@
 """Various utilities"""
-import numpy as np
 from uuid import uuid4
+
+import numpy as np
 
 
 def get_min_max(values):

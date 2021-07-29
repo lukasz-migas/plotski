@@ -1,18 +1,12 @@
 """Classes to generate bokeh plots"""
-# Standard library imports
 import os
 import webbrowser
 from collections.abc import Iterable
 
-# Third-party imports
 import numpy as np
-from bokeh.models import Div
-from bokeh.models import Band
-from bokeh.models import Span
-from bokeh.models import LabelSet
-from bokeh.models import BoxAnnotation
-from bokeh.layouts import column
 from bokeh.io.export import get_layout_html
+from bokeh.layouts import column
+from bokeh.models import Band, BoxAnnotation, Div, LabelSet, Span
 
 from .utilities import get_min_max
 

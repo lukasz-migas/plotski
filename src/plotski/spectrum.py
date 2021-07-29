@@ -1,12 +1,9 @@
 """Various mass spectra plot objects"""
-from bokeh.models import Legend
-from bokeh.models import Range1d
-from bokeh.models import HoverTool
+from bokeh.models import HoverTool, Legend, Range1d
 from bokeh.plotting import figure
 
 from .plot import Plot
-from .utilities import check_key
-from .utilities import check_source
+from .utilities import check_key, check_source
 
 
 class PlotSpectrum(Plot):

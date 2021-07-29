@@ -2,10 +2,7 @@
 
 # Third-party imports
 import numpy as np
-from bokeh.models import Range1d
-from bokeh.models import ColorBar
-from bokeh.models import HoverTool
-from bokeh.models import BasicTicker
+from bokeh.models import BasicTicker, ColorBar, HoverTool, Range1d
 from bokeh.plotting import figure
 
 # Local imports

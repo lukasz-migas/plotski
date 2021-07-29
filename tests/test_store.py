@@ -6,10 +6,10 @@ import os
 import numpy as np
 import pytest
 from bokeh.models.widgets import Tabs
+from imimspy.visuals.bokeh.store import PlotStore
 
 # Local imports
 from imimspy.visuals.rgb import ImageRGBA
-from imimspy.visuals.bokeh.store import PlotStore
 
 
 @pytest.fixture
@@ -235,7 +235,6 @@ class TestPlotStore:
 
     @staticmethod
     def test_add_annotations_image(store):
-        x, y = np.arange(0, 10), np.arange(0, 10)
         image = np.random.randint(0, 100, (10, 10))
         tab_name = "heatmap"
         _, _, plot = store.plot_image(tab_name, dict(image=[image]))
