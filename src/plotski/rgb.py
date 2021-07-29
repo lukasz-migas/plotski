@@ -3,10 +3,9 @@ import typing as ty
 from itertools import cycle
 
 import numpy as np
-from skimage import exposure
-from skimage.color import gray2rgb
-from skimage.color import gray2rgba
 from matplotlib.colors import ListedColormap
+from skimage import exposure
+from skimage.color import gray2rgb, gray2rgba
 
 # Local imports
 from .utilities import convert_hex_to_rgb_1, rescale
