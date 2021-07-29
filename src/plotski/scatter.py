@@ -1,3 +1,4 @@
+"""Scatter plot."""
 from bokeh.models import Range1d
 from bokeh.plotting import figure
 
@@ -6,6 +7,8 @@ from .utilities import check_source
 
 
 class PlotScatter(Plot):
+    """Scatter plot."""
+
     def __init__(
         self,
         output_dir,
@@ -14,7 +17,7 @@ class PlotScatter(Plot):
         y_axis_label="y",
         title="Scatter",
         plot_type="scatter",
-        intilize=True,
+        initialize=True,
         **options,
     ):
         Plot.__init__(self, output_dir, x_axis_label, y_axis_label, **options)
@@ -37,7 +40,7 @@ class PlotScatter(Plot):
         self.add_plot_data()
 
         # set plot layout and misc data
-        if intilize:
+        if initialize:
             self.set_ranges()
         self.set_hover()
         self.set_figure_attributes()

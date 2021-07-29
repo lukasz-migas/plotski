@@ -17,7 +17,7 @@ class PlotSpectrum(Plot):
         y_axis_label="y",
         title="Spectrum",
         plot_type="spectrum",
-        intilize=True,
+        initialize=True,
         **options,
     ):
         Plot.__init__(self, output_dir, x_axis_label, y_axis_label, **options)
@@ -30,10 +30,10 @@ class PlotSpectrum(Plot):
         self.source = source
         self.check_data_source()
 
-        # initilize options
+        # initialize options
         self.initilize_options()
 
-        # intilize figure
+        # initialize figure
         self.figure = figure(
             tools=self.options["tools"],
             active_drag=self.options["active_drag"],
@@ -45,7 +45,7 @@ class PlotSpectrum(Plot):
         self.add_plot_data()
 
         # set plot layout and misc data
-        if intilize:
+        if initialize:
             self.set_ranges()
         self.set_hover()
         self.set_figure_attributes()

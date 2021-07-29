@@ -1,7 +1,94 @@
 """Various utilities"""
+import typing as ty
 from uuid import uuid4
 
+import matplotlib.cm as cm
+import matplotlib.colors as colors
 import numpy as np
+from bokeh.models.mappers import LinearColorMapper
+
+
+def convert_colormap_to_mapper(array, colormap="viridis", palette=None, z_min=None, z_max=None):
+    """Convert matplotlib colormap to Bokeh colormapper
+
+    Parameters
+    ----------
+    array : np.ndarray
+        array
+    colormap : str
+        name of the colormap
+    palette :
+    z_min : float
+        starting intensity for the colormap
+    z_max : float
+        final intensity for the colormap
+
+    Returns
+    -------
+    _palette : Palette
+        Bokeh palette
+    _color_mapper : LinearColorMapper
+        Bokeh colormapper
+    """
+    array = np.nan_to_num(array)
+    if z_min is None:
+        z_min = np.round(np.min(array), 2)
+    if z_max is None:
+        z_max = np.round(np.max(array), 2)
+
+    if palette is None:
+        _colormap = cm.get_cmap(colormap)
+        _palette = [colors.rgb2hex(m) for m in _colormap(np.arange(_colormap.N))]
+    else:
+        _palette = palette
+
+    _color_mapper = LinearColorMapper(palette=_palette, low=z_min, high=z_max)
+
+    return _palette, _color_mapper
+
+
+def rescale(values: ty.Union[np.ndarray, ty.List], new_min: float, new_max: float, dtype=None) -> np.ndarray:
+    """Rescale values from one range to another
+
+    Parameters
+    ----------
+    values : Union[np.ndarray, List]
+        input range
+    new_min : float
+        new minimum value
+    new_max : float
+        new maximum value
+    dtype :
+        data type
+
+    Returns
+    -------
+    new_values : np.ndarray
+        rescaled range
+    """
+    values = np.asarray(values)
+    if dtype is None:
+        dtype = values.dtype
+    old_min, old_max = values.min(), values.max()
+    new_values = ((values - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
+    return new_values.astype(dtype)
+
+
+def convert_hex_to_rgb_1(hex_str, decimals=3):
+    """Convert hex color to rgb in range 0-1."""
+    hex_color = hex_str.lstrip("#")
+    hlen = len(hex_color)
+    rgb = tuple(int(hex_color[i : i + int(hlen / 3)], 16) for i in range(0, int(hlen), int(hlen / 3)))
+    return [np.round(rgb[0] / 255.0, decimals), np.round(rgb[1] / 255.0, decimals), np.round(rgb[2] / 255.0, decimals)]
+
+
+def convert_hex_to_rgb_255(hex_str):
+    """Convert hex color to rgb in range 0-255."""
+    hex_color = hex_str.lstrip("#")
+    hlen = len(hex_color)
+    rgb = list(int(hex_color[i : i + int(hlen / 3)], 16) for i in range(0, int(hlen), int(hlen / 3)))
+
+    return rgb
 
 
 def get_min_max(values):

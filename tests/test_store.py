@@ -1,15 +1,12 @@
 """Test imimspy.visualise.store.py"""
-# Standard library imports
 import os
 
-# Third-party imports
 import numpy as np
 import pytest
 from bokeh.models.widgets import Tabs
-from imimspy.visuals.bokeh.store import PlotStore
 
-# Local imports
-from imimspy.visuals.rgb import ImageRGBA
+from plotski.rgb import ImageRGBA
+from plotski.store import PlotStore
 
 
 @pytest.fixture

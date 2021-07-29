@@ -27,10 +27,10 @@ class PlotHeatmap(Plot):
         self.source = source
         self.check_data_source()
 
-        # initilize options
-        self.initilize_options()
+        # initialize options
+        self.initialize_options()
 
-        # intilize figure
+        # initialize figure
         self.figure = figure(tools=self.options["tools"], active_drag=self.options["active_drag"])
 
         # add plot
@@ -44,9 +44,9 @@ class PlotHeatmap(Plot):
         self.set_figure_dimensions()
         self.set_layout()
 
-    def initilize_options(self):
+    def initialize_options(self):
         """Setup few options"""
-        from imimspy.visuals.utils import convert_colormap_to_mapper
+        from .utilities import convert_colormap_to_mapper
 
         # setup some common options if the user has not specified them
         if "cmap" not in self.options:
