@@ -20,18 +20,15 @@ class PlotSpectrum(Plot):
         initialize=True,
         **options,
     ):
-        Plot.__init__(self, output_dir, x_axis_label, y_axis_label, **options)
+        Plot.__init__(self, output_dir, x_axis_label, y_axis_label, title=title, **options)
         self.plot_type = plot_type
-        self._div_title = title
-        self._div_header = options.pop("header", "")
-        self._div_footer = options.pop("footer", "")
 
         # set source
         self.source = source
         self.check_data_source()
 
         # initialize options
-        self.initilize_options()
+        self.initialize_options()
 
         # initialize figure
         self.figure = figure(
@@ -93,7 +90,7 @@ class PlotSpectrum(Plot):
         self.figure.plot_width = self.options.get("plot_width", 800)
         self.figure.plot_height = self.options.get("plot_height", 400)
 
-    def initilize_options(self):
+    def initialize_options(self):
         """Convenience function to handle various options set by the user"""
         if "line_width" not in self.options:
             self.options["line_width"] = 1.5
@@ -497,10 +494,4 @@ class PlotMultiLine(PlotSpectrum):
         if check_key(self.source, "line_id"):
             tooltips.append(("Line ID", "@line_id"))
 
-        self.figure.add_tools(
-            HoverTool(
-                show_arrow=True,
-                tooltips=tooltips,
-                line_policy="next",
-            )
-        )
+        self.figure.add_tools(HoverTool(show_arrow=True, tooltips=tooltips, line_policy="next",))

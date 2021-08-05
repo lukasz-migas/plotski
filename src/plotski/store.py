@@ -12,7 +12,7 @@ from bokeh.layouts import column, gridplot, row
 from bokeh.models import ColumnDataSource
 from bokeh.models.widgets import Panel, Tabs
 
-from .heatmap import PlotImage, PlotImageRGBA
+from .image import PlotImage, PlotImageRGBA
 from .plot import Plot
 from .scatter import PlotScatter
 from .spectrum import (
@@ -120,7 +120,7 @@ class PlotStore:
             raise ValueError("Some of the specified tab names are not present in the figure store")
 
         panels = []
-        # intilize panel store
+        # initialize panel store
         # iterate over each tab
         for tab_name in tab_names:
             tab_contents = self.tabs[tab_name]
@@ -159,7 +159,7 @@ class PlotStore:
 
         Parameters
         ----------
-        filepath : str
+        filepath : Path, optional
             path where to save the HTML document
         show : bool
             if 'True', newly generated document will be shown in the browser

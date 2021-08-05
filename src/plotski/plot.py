@@ -5,14 +5,17 @@ from collections.abc import Iterable
 
 import numpy as np
 from bokeh.io.export import get_layout_html
-from bokeh.layouts import column
+from bokeh.layouts import column, row
 from bokeh.models import Band, BoxAnnotation, Div, LabelSet, Span
 
+from .enums import Position
 from .utilities import get_min_max
 
 
 class Plot:
     """Base class for all other plots"""
+
+    _div_title, _div_header, _div_footer = None, None, None
 
     def __init__(self, output_dir: str, x_axis_label: str = "x", y_axis_label: str = "y", **options):
         """Base class for interactive plots
@@ -41,14 +44,15 @@ class Plot:
         self._layout = None
         self.source = None
         self.annotations = dict()
-        self._div_title = None
-        self._div_header = None
-        self._div_footer = None
+        self.div_title = options.pop("title", "")
+        self.div_header = options.pop("header", "")
+        self._div_header_pos: Position = options.pop("header_pos", Position.ABOVE)
+        self.div_footer = options.pop("footer", "")
         self._x_extents = []
         self._y_extents = []
 
         # plot attributes
-        self.options = options if options is not None else dict()
+        self.options = options
         self.metadata = dict(x_axis_label=x_axis_label, y_axis_label=y_axis_label)
 
     def set_figure_attributes(self):
@@ -75,6 +79,7 @@ class Plot:
 
     def set_header(self, text: str):
         """Set header text on the header div"""
+        self._div_header = text
         self.div_header.text = text
 
     @property
@@ -94,7 +99,7 @@ class Plot:
     @property
     def div_footer(self):
         """Return footer"""
-        return Div(text=self._div_footer)
+        return Div(text=self._div_footer, visible=True if self._div_footer else False)
 
     @div_footer.setter
     def div_footer(self, value):
@@ -120,21 +125,32 @@ class Plot:
         --- to be added in the future ---
         TOOLS - interactive tools added for improved visualisation and control purposes
         """
-        self._layout = column(self.div_title, self.div_header, self.figure, self.div_footer)
+        layout = [self.div_title]
+        if self._div_header_pos == Position.ABOVE:
+            layout.append(self.div_header)
+        elif self._div_header_pos == Position.LEFT:
+            layout.append(row(self.div_header, self.figure))
+        elif self._div_header_pos == Position.RIGHT:
+            layout.append(row(self.figure, self.div_header))
+        else:
+            layout.extend([self.figure, self.div_header])
+        layout.append(self.div_footer)
+        self._layout = column(*layout)
         if init_range:
             self.set_ranges()
         return self._layout
 
     def link_axes(self, x_range=None, y_range=None):
         """Link x- and/or y-axis ranges to another plot"""
-        if x_range:
-            if isinstance(x_range, Plot):
-                x_range = x_range.figure.x_range
-            self.figure.x_range = x_range
-        if y_range:
-            if isinstance(y_range, Plot):
-                y_range = x_range.figure.y_range
-            self.figure.y_range = y_range
+        # if x_range:
+        #     if hasattr(x_range, "figure"):
+        #         x_range.figure.x_range = self.figure.x_range
+        #         # x_range = x_range.figure.x_range
+        #     # self.figure.x_range = x_range
+        # if y_range:
+        #     if hasattr(x_range, "figure"):
+        #         y_range = x_range.figure.y_range
+        #     self.figure.y_range = y_range
 
     def add_extents(self, x: np.ndarray = None, y: np.ndarray = None):
         """Add x-axis extents"""

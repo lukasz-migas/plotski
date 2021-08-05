@@ -20,11 +20,8 @@ class PlotScatter(Plot):
         initialize=True,
         **options,
     ):
-        Plot.__init__(self, output_dir, x_axis_label, y_axis_label, **options)
+        Plot.__init__(self, output_dir, x_axis_label, y_axis_label, title=title, **options)
         self.plot_type = plot_type
-        self._div_title = title
-        self._div_header = options.pop("header", "")
-        self._div_footer = options.pop("footer", "")
 
         # set source
         self.source = source

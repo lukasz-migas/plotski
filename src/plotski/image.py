@@ -10,18 +10,15 @@ from .plot import Plot
 from .utilities import calculate_aspect_ratio
 
 
-class PlotHeatmap(Plot):
+class PlotImageBase(Plot):
     """Basic heatmap plot"""
 
     def __init__(
         self, output_dir, source, x_axis_label="", y_axis_label="", title="Heatmap", plot_type="heatmap", **options
     ):
-        Plot.__init__(self, output_dir, x_axis_label, y_axis_label, **options)
+        Plot.__init__(self, output_dir, x_axis_label, y_axis_label, title=title, **options)
 
         self.plot_type = plot_type
-        self._div_title = title
-        self._div_header = options.pop("header", "")
-        self._div_footer = options.pop("footer", "")
 
         # set source
         self.source = source
@@ -110,9 +107,9 @@ class PlotHeatmap(Plot):
             self.source.data["dh"] = [self.source.data["image"][0].shape[0]]
 
 
-class PlotImage(PlotHeatmap):
+class PlotImage(PlotImageBase):
     def __init__(self, output_dir, source, title="Image", **options):
-        PlotHeatmap.__init__(self, output_dir, source=source, title=title, plot_type="image", **options)
+        PlotImageBase.__init__(self, output_dir, source=source, title=title, plot_type="image", **options)
 
     def add_plot_data(self):
         self.plots["image"] = self.figure.image(
@@ -142,9 +139,9 @@ class PlotImage(PlotHeatmap):
             self.add_colorbar()
 
 
-class PlotImageRGBA(PlotHeatmap):
+class PlotImageRGBA(PlotImageBase):
     def __init__(self, output_dir, source, title="Image-RGBA", **options):
-        PlotHeatmap.__init__(self, output_dir, source=source, title=title, plot_type="rgba", **options)
+        PlotImageBase.__init__(self, output_dir, source=source, title=title, plot_type="rgba", **options)
 
     def add_plot_data(self):
         self.plots["rgba"] = self.figure.image_rgba(
@@ -155,7 +152,7 @@ class PlotImageRGBA(PlotHeatmap):
         pass
 
     def check_data_source(self):
-        PlotHeatmap.check_data_source(self)
+        PlotImageBase.check_data_source(self)
         if self.source.data["image"][0].dtype != np.uint8:
             raise ValueError("ImageRGBA expects 8-bit values")
 
