@@ -1,4 +1,5 @@
 """Various utilities"""
+import random
 import typing as ty
 from uuid import uuid4
 
@@ -77,18 +78,22 @@ def rescale(values: ty.Union[np.ndarray, ty.List], new_min: float, new_max: floa
 def convert_hex_to_rgb_1(hex_str, decimals=3):
     """Convert hex color to rgb in range 0-1."""
     hex_color = hex_str.lstrip("#")
-    hlen = len(hex_color)
-    rgb = tuple(int(hex_color[i : i + int(hlen / 3)], 16) for i in range(0, int(hlen), int(hlen / 3)))
+    n = len(hex_color)
+    rgb = tuple(int(hex_color[i : i + int(n / 3)], 16) for i in range(0, int(n), int(n / 3)))
     return [np.round(rgb[0] / 255.0, decimals), np.round(rgb[1] / 255.0, decimals), np.round(rgb[2] / 255.0, decimals)]
 
 
 def convert_hex_to_rgb_255(hex_str):
     """Convert hex color to rgb in range 0-255."""
     hex_color = hex_str.lstrip("#")
-    hlen = len(hex_color)
-    rgb = list(int(hex_color[i : i + int(hlen / 3)], 16) for i in range(0, int(hlen), int(hlen / 3)))
-
+    n = len(hex_color)
+    rgb = list(int(hex_color[i : i + int(n / 3)], 16) for i in range(0, int(n), int(n / 3)))
     return rgb
+
+
+def get_random_hex_color():
+    """Return random hex color"""
+    return "#%06x" % random.randint(0, 0xFFFFFF)
 
 
 def get_min_max(values):
