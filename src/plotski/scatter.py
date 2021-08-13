@@ -38,7 +38,7 @@ class PlotScatter(Plot):
 
         # set plot layout and misc data
         if initialize:
-            self.set_ranges()
+            self.set_ranges(**options)
         self.set_hover()
         self.set_figure_attributes()
         self.set_options()
@@ -78,7 +78,7 @@ class PlotScatter(Plot):
         if "active_drag" not in self.options:
             self.options["active_drag"] = "xbox_zoom"
 
-    def set_ranges(self):
+    def set_ranges(self, **kwargs):
         # update x/y ranges
         src = self.source.data
         x_range = self.options.get("x_range", (min(src["x"]), max(src["x"]) * 1.05))

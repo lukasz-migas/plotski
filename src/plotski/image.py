@@ -34,7 +34,7 @@ class PlotImageBase(Plot):
         self.add_plot_data()
 
         # set plot layout and misc data
-        self.set_ranges()
+        self.set_ranges(**options)
         self.set_hover()
         self.set_figure_attributes()
         self.set_options()
@@ -71,7 +71,7 @@ class PlotImageBase(Plot):
     def set_options(self):
         raise NotImplementedError("Must implement method")
 
-    def set_ranges(self):
+    def set_ranges(self, **kwargs):
         self.figure.xaxis.axis_label_text_baseline = "bottom"
 
         # update x/y ranges

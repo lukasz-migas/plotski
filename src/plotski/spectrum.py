@@ -43,7 +43,7 @@ class PlotSpectrum(Plot):
 
         # set plot layout and misc data
         if initialize:
-            self.set_ranges()
+            self.set_ranges(**options)
         self.set_hover()
         self.set_figure_attributes()
         self.set_options()
@@ -103,10 +103,10 @@ class PlotSpectrum(Plot):
         if "active_drag" not in self.options:
             self.options["active_drag"] = "xbox_zoom"
 
-    def set_ranges(self):
+    def set_ranges(self, **kwargs):
         """Set range based on data source"""
         # update x/y ranges
-        x_min, x_max, y_min, y_max = self.get_extents()
+        x_min, x_max, y_min, y_max = self.get_extents(**kwargs)
         if "x_range" not in self.options:
             self.figure.x_range = Range1d(x_min, x_max)
         if "y_range" not in self.options:
@@ -145,7 +145,7 @@ class PlotSpectrum(Plot):
     def add_centroids_y(self, source, **kwargs):
         """Add horizontal centroids"""
         segment = self.figure.segment(x0="x0", y0="y", x1="x1", y1="y", source=source, **kwargs)
-        self.annotations[segment.id] = (source, "Segment")
+        self.annotations[segment.id] = (source, "Centroid-Y")
 
     def add_scatter(self, source, **kwargs):
         """Add scatter points"""

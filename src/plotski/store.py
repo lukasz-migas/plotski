@@ -119,10 +119,9 @@ class PlotStore:
         if not all([tab_name in self.tabs for tab_name in tab_names]):
             raise ValueError("Some of the specified tab names are not present in the figure store")
 
-        panels = []
         # initialize panel store
-        # iterate over each tab
-        for tab_name in tab_names:
+        panels = []
+        for tab_name in tab_names:  # iterate over each tab
             tab_contents = self.tabs[tab_name]
             _tab_contents = []
             # iterate over each object specified in the tab

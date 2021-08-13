@@ -127,13 +127,13 @@ class Plot:
         """
         layout = [self.div_title]
         if self._div_header_pos == Position.ABOVE:
-            layout.append(self.div_header)
+            layout.extend([self.div_header, self.figure])
         elif self._div_header_pos == Position.LEFT:
             layout.append(row(self.div_header, self.figure))
         elif self._div_header_pos == Position.RIGHT:
-            layout.append(row(self.figure, self.div_header))
+            layout.append(row(self.div_header, self.figure))
         else:
-            layout.extend([self.figure, self.div_header])
+            layout.extend([self.div_header, self.figure])
         layout.append(self.div_footer)
         self._layout = column(*layout)
         if init_range:
@@ -159,10 +159,12 @@ class Plot:
         if y is not None:
             self._y_extents.append(get_min_max(y))
 
-    def get_extents(self):
+    def get_extents(self, **kwargs):
         """Get x and y-axis extents"""
         x_min, x_max = get_min_max(self._x_extents)
+        x_min, x_max = kwargs.get("x_min", x_min), kwargs.get("x_max", x_max)
         y_min, y_max = get_min_max(self._y_extents)
+        y_min, y_max = kwargs.get("y_min", y_min), kwargs.get("y_max", y_max)
         return x_min, x_max, y_min, y_max
 
     def add_box(self, data, **kwargs):
