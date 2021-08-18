@@ -111,7 +111,7 @@ class Plot:
         """Get layout"""
         return self.set_layout()
 
-    def set_ranges(self):
+    def set_ranges(self, **kwargs):
         """Set x/y-axis range"""
 
     def set_layout(self, init_range: bool = True):

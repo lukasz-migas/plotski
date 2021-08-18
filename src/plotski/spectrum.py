@@ -207,7 +207,7 @@ class PlotCentroid(PlotSpectrum):
         """Ensure that each field in the data source is correct"""
         check_source(self.source, ["x", "y0", "y1"])
 
-    def set_ranges(self):
+    def set_ranges(self, **kwargs):
         """Set ranges"""
         # update x/y ranges
         src = self.source.data
@@ -344,7 +344,7 @@ class PlotButterflySpectrum(PlotSpectrum):
         self.figure.add_layout(legend, "above")
         self.figure.legend.click_policy = "hide"
 
-    def set_ranges(self):
+    def set_ranges(self, **kwargs):
         """Set ranges"""
         # update x/y ranges
         src = self.source.data
@@ -472,7 +472,7 @@ class PlotMultiLine(PlotSpectrum):
         """Add legend item to the plot"""
         pass
 
-    def set_ranges(self):
+    def set_ranges(self, **kwargs):
         """Set plot ranges"""
         # update x/y ranges
         # src = self.source.data
