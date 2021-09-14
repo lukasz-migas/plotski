@@ -1,27 +1,42 @@
+"""Image."""
 import numpy as np
-from bokeh.models import BasicTicker, ColorBar, HoverTool, Range1d
+from bokeh.models import BasicTicker, ColorBar, ColumnDataSource, HoverTool, Range1d
 from bokeh.plotting import figure
 
-from .plot import Plot
+from .base import Plot
 from .utilities import calculate_aspect_ratio
 
 
 class PlotImageBase(Plot):
     """Basic heatmap plot"""
 
+    # Data attributes
     DATA_KEYS = ("image", "x", "y", "dw", "dh")
+    TOOLS = ("pan, box_zoom, crosshair, reset",)
+    ACTIVE_DRAG = "box_zoom"
 
     def __init__(
-        self, output_dir, source, x_axis_label="", y_axis_label="", title="Heatmap", plot_type="heatmap", **kwargs
+        self,
+        output_dir: str,
+        source: ColumnDataSource,
+        x_axis_label: str = "",
+        y_axis_label: str = "",
+        title: str = "Heatmap",
+        plot_type: str = "heatmap",
+        initialize: bool = True,
+        **kwargs,
     ):
-        Plot.__init__(self, output_dir, source, x_axis_label, y_axis_label, title=title, plot_type=plot_type, **kwargs)
-        # set plot layout and misc data
-        self.set_ranges(**kwargs)
-        self.set_hover()
-        self.set_figure_attributes()
-        self.set_options()
-        self.set_figure_dimensions()
-        self.set_layout()
+        Plot.__init__(
+            self,
+            output_dir,
+            source,
+            x_axis_label,
+            y_axis_label,
+            title=title,
+            plot_type=plot_type,
+            initilize=initialize,
+            **kwargs,
+        )
 
     def plot(self):
         """Main plotting function."""
@@ -45,20 +60,16 @@ class PlotImageBase(Plot):
             z_min=self.kwargs.get("z_min", None),
             z_max=self.kwargs.get("z_max", None),
         )
-        if "tools" not in self.kwargs:
-            self.kwargs["tools"] = ("pan, box_zoom, crosshair, reset",)
-        if "active_drag" not in self.kwargs:
-            self.kwargs["active_drag"] = "box_zoom"
+        super().initialize_options()
 
     def set_hover(self):
+        """Set hover."""
         self.figure.add_tools(
             HoverTool(show_arrow=True, tooltips=[("x, y", "$x{0.00}, $y{0.00}"), ("intensity", "@image")])
         )
 
-    def set_options(self):
-        raise NotImplementedError("Must implement method")
-
     def set_ranges(self, **kwargs):
+        """Set ranges."""
         self.figure.xaxis.axis_label_text_baseline = "bottom"
 
         # update x/y ranges
@@ -69,6 +80,7 @@ class PlotImageBase(Plot):
         self.figure.y_range = Range1d(*y_range)
 
     def set_figure_dimensions(self):
+        """Set figure dimensions."""
         plot_height, plot_width = calculate_aspect_ratio(self.source.data["image"][0].shape, 600)
         if plot_height > 600:
             _ratio = 600 / plot_height
@@ -98,7 +110,7 @@ class PlotImageBase(Plot):
 class PlotImage(PlotImageBase):
     """Image class"""
 
-    def __init__(self, output_dir, source, title="Image", **kwargs):
+    def __init__(self, output_dir: str, source: ColumnDataSource, title="Image", **kwargs):
         PlotImageBase.__init__(self, output_dir, source=source, title=title, plot_type="image", **kwargs)
 
     def plot(self):
@@ -116,6 +128,7 @@ class PlotImage(PlotImageBase):
         self.plots["image"].glyph.color_mapper = self.kwargs["colormapper"]
 
     def add_colorbar(self):
+        """Add colorbar."""
         color_bar = ColorBar(
             color_mapper=self.kwargs["colormapper"],
             ticker=BasicTicker(),
@@ -126,6 +139,7 @@ class PlotImage(PlotImageBase):
         self.figure.add_layout(color_bar, "right")
 
     def set_options(self):
+        """Set options."""
         if self.kwargs.get("add_colorbar", False):
             self.add_colorbar()
 
@@ -133,7 +147,7 @@ class PlotImage(PlotImageBase):
 class PlotImageRGBA(PlotImageBase):
     """RGB Image class."""
 
-    def __init__(self, output_dir, source, title="Image-RGBA", **kwargs):
+    def __init__(self, output_dir: str, source: ColumnDataSource, title="Image-RGBA", **kwargs):
         PlotImageBase.__init__(self, output_dir, source=source, title=title, plot_type="rgba", **kwargs)
 
     def plot(self):
@@ -142,10 +156,8 @@ class PlotImageRGBA(PlotImageBase):
             x="x", y="y", dw="dw", dh="dh", image="image", source=self.source, name="rgba"
         )
 
-    def set_options(self):
-        pass
-
     def check_data_source(self):
+        """Check data sources."""
         PlotImageBase.check_data_source(self)
         if self.source.data["image"][0].dtype != np.uint8:
             raise ValueError("ImageRGBA expects 8-bit values")

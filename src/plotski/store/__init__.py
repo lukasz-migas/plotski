@@ -2,6 +2,7 @@
 import math
 import os
 import typing as ty
+import warnings
 import webbrowser
 
 import numpy as np
@@ -10,19 +11,11 @@ from bokeh.layouts import column, gridplot, row
 from bokeh.models import ColumnDataSource
 from bokeh.models.widgets import Panel, Tabs
 
-from .image import PlotImage, PlotImageRGBA
-from .plot import Plot
-from .scatter import PlotScatter
-from .spectrum import (
-    PlotButterflyMassSpectrum,
-    PlotButterflyMobilogram,
-    PlotCentroidMassSpectrum,
-    PlotMassSpectrum,
-    PlotMobilogram,
-    PlotMultiLine,
-    PlotSpectrum,
-)
-from .utilities import get_unique_str
+from ..base import Plot
+from ..image import PlotImage, PlotImageRGBA
+from ..scatter import PlotScatter
+from ..spectrum.plot import PlotMultiLine, PlotSpectrum
+from ..utilities import get_unique_str
 
 # TODO: add repr that shows the layout of the store e.g. tab 1 \ plot 1 plot 2 plot 3; tab 2 \ plot 1 plot 2 plot 3
 # TODO: add option to annotate spectrum and heatmap with rois and/or peaks
@@ -40,7 +33,7 @@ class PlotStore:
         self.document_title = title
 
         # store of figures
-        self.tabs = {}
+        self.tabs: ty.Dict[str, ty.Dict[str, ty.List[Plot]]] = {}
 
     def __repr__(self):
         """Print"""
@@ -180,10 +173,9 @@ class PlotStore:
         if filepath is None:
             filepath = os.path.join(self.output_dir, self.filename)
 
-        save(self.get_layout(**kwargs), filepath, title=self.document_title)
-        # html_str = get_layout_html(self.get_layout(**kwargs))
-        # with open(filepath, "wb") as f_ptr:
-        #     f_ptr.write(html_str.encode("utf-8"))
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore")
+            save(self.get_layout(**kwargs), filepath, title=self.document_title)
 
         # open figure in browser
         if show:
@@ -335,24 +327,22 @@ class PlotStore:
         self.tabs[tab_name][layout_name].append(plot)
         return plot
 
-    def plot_scatter(self, tab_name, data, item_name=None, **kwargs):
+    def plot_scatter(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
         """Adds generic scatter to the plot store
 
         Parameters
         ----------
         tab_name : str
-            name of the tab where plot should be added to
+            Name of the tab where plot should be added to.
         data : dict
-            dictionary containing appropriate plot fields
-            in this case:
-                x = list / array
-                y = list / array
+            Dictionary containing appropriate plot fields, in this case:
+                x, y = list / array
             the length of x and y must be the same
-        item_name : str
-            by default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
+        layout_name : str
+            By default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
             will be added as 'item #0', if there is one then it will be added as 'item #1' etc. Sometimes you might want
             to add it to a 'row' or 'column' for which you have name - you can specify its name here and if its present
-            the plot object will be added to that container
+            the plot object will be added to that container.
         kwargs :
             dictionary containing plot parameters e.g. x/y axis labels, title, etc...
 
@@ -365,7 +355,6 @@ class PlotStore:
         plot : Plot
             plot object
         """
-        assert isinstance(data, dict), "Provided data source was incorrect. Expected dictionary"
         self.check_tab(tab_name)
         self.check_data(data, ("x", "y"))
 
@@ -373,11 +362,11 @@ class PlotStore:
         plot = PlotScatter(self.output_dir, source=source, **kwargs)
 
         # add figure object to tab
-        item_name = item_name if item_name is not None else self.get_unique_name(tab_name)
-        self.append_item(tab_name, item_name, plot)
-        return tab_name, item_name, plot
+        layout_name = layout_name if layout_name is not None else self.get_unique_name(tab_name)
+        self.append_item(tab_name, layout_name, plot)
+        return tab_name, layout_name, plot
 
-    def plot_spectrum(self, tab_name, data, item_name=None, **kwargs):
+    def plot_spectrum(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
         """Adds generic spectrum to the plot store
 
         Parameters
@@ -385,16 +374,14 @@ class PlotStore:
         tab_name : str
             name of the tab where plot should be added to
         data : dict
-            dictionary containing appropriate plot fields
-            in this case:
-                x = list / array
-                y = list / array
+            Dictionary containing appropriate plot fields, in this case:
+                x, y = list / array
             the length of x and y must be the same
-        item_name : str
-            by default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
+        layout_name : str
+            By default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
             will be added as 'item #0', if there is one then it will be added as 'item #1' etc. Sometimes you might want
             to add it to a 'row' or 'column' for which you have name - you can specify its name here and if its present
-            the plot object will be added to that container
+            the plot object will be added to that container.
         kwargs :
             dictionary containing plot parameters e.g. x/y axis labels, title, etc...
 
@@ -407,7 +394,6 @@ class PlotStore:
         plot : PlotSpectrum
             plot object
         """
-        assert isinstance(data, dict)
         self.check_tab(tab_name)
         self.check_data(data, ("x", "y"))
 
@@ -415,217 +401,11 @@ class PlotStore:
         plot = PlotSpectrum(self.output_dir, source=source, **kwargs)
 
         # add figure object to tab
-        item_name = item_name if item_name is not None else self.get_unique_name(tab_name)
-        self.append_item(tab_name, item_name, plot)
-        return tab_name, item_name, plot
+        layout_name = layout_name if layout_name is not None else self.get_unique_name(tab_name)
+        self.append_item(tab_name, layout_name, plot)
+        return tab_name, layout_name, plot
 
-    def plot_mass_spectrum(self, tab_name, data, item_name=None, **kwargs):
-        """Adds mass spectrum to the plot store
-
-        Parameters
-        ----------
-        tab_name : str
-            name of the tab where plot should be added to
-        data : dict
-            dictionary containing appropriate plot fields
-            in this case:
-                x = list / array
-                y = list / array
-            the length of x and y must be the same
-        item_name : str
-            by default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
-            will be added as 'item #0', if there is one then it will be added as 'item #1' etc. Sometimes you might want
-            to add it to a 'row' or 'column' for which you have name - you can specify its name here and if its present
-            the plot object will be added to that container
-        kwargs :
-            dictionary containing plot parameters e.g. x/y axis labels, title, etc...
-
-        Returns
-        -------
-        tab_name : str
-            name of the tab
-        item_name : str
-            name of the plot
-        plot : PlotMassSpectrum
-            plot object
-        """
-        assert isinstance(data, dict)
-        self.check_tab(tab_name)
-        self.check_data(data, ("x", "y"))
-
-        source = ColumnDataSource(data)
-        plot = PlotMassSpectrum(self.output_dir, source=source, **kwargs)
-
-        # add figure object to tab
-        item_name = item_name if item_name is not None else self.get_unique_name(tab_name)
-        plot = self.append_item(tab_name, item_name, plot)
-        return tab_name, item_name, plot
-
-    def plot_butterfly_mass_spectrum(self, tab_name, data, item_name=None, **kwargs):
-        """Adds butterfly mass spectra to the plot store (one on top / one below)
-
-        Parameters
-        ----------
-        tab_name : str
-            name of the tab where plot should be added to
-        data : dict
-            Dictionary containing appropriate plot fields, in this case:
-                x_top, y_top, x_bottom, y_bottom = list / array
-            the length of x_top and y_top, x_bottom and y_bottom must be the same.
-        item_name : str
-            by default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
-            will be added as 'item #0', if there is one then it will be added as 'item #1' etc. Sometimes you might want
-            to add it to a 'row' or 'column' for which you have name - you can specify its name here and if its present
-            the plot object will be added to that container
-        kwargs :
-            dictionary containing plot parameters e.g. x/y axis labels, title, etc...
-
-        Returns
-        -------
-        tab_name : str
-            name of the tab
-        item_name : str
-            name of the plot
-        plot : PlotButterflyMassSpectrum
-            plot object
-        """
-        assert isinstance(data, dict)
-        self.check_tab(tab_name)
-        self.check_data(data, ("x_top", "y_top", "x_bottom", "y_bottom"))
-
-        source = ColumnDataSource(data=data)
-        plot = PlotButterflyMassSpectrum(self.output_dir, source=source, **kwargs)
-
-        # add figure object to tab
-        item_name = item_name if item_name is not None else self.get_unique_name(tab_name)
-        self.append_item(tab_name, item_name, plot)
-        return tab_name, item_name, plot
-
-    def plot_centroid_mass_spectrum(self, tab_name, data, item_name=None, **kwargs):
-        """Adds centroid mass spectrum to the plot store
-
-        Parameters
-        ----------
-        tab_name : str
-            name of the tab where plot should be added to
-        data : dict
-            Dictionary containing appropriate plot fields, in this case:
-                x, y0, y1 = list / array
-            the length of x and y0 and y1 must be the same.
-            If y0 is not provided, values will be automatically generated to provide array of 0s
-        item_name : str
-            by default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
-            will be added as 'item #0', if there is one then it will be added as 'item #1' etc. Sometimes you might want
-            to add it to a 'row' or 'column' for which you have name - you can specify its name here and if its present
-            the plot object will be added to that container
-        kwargs :
-            dictionary containing plot parameters e.g. x/y axis labels, title, etc...
-
-        Returns
-        -------
-        tab_name : str
-            name of the tab
-        item_name : str
-            name of the plot
-        plot : PlotCentroidMassSpectrum
-            plot object
-        """
-        assert isinstance(data, dict)
-        self.check_tab(tab_name)
-        if "y0" not in data:
-            data["y0"] = np.zeros_like(data["x"], dtype=np.int8)
-        self.check_data(data, ("x", "y0", "y1"))
-
-        source = ColumnDataSource(data)
-        plot = PlotCentroidMassSpectrum(self.output_dir, source=source, **kwargs)
-
-        # add figure object to tab
-        item_name = item_name if item_name is not None else self.get_unique_name(tab_name)
-        self.append_item(tab_name, item_name, plot)
-        return tab_name, item_name, plot
-
-    def plot_mobilogram(self, tab_name, data, item_name=None, **kwargs):
-        """Adds mobilogram to the plot store
-
-        Parameters
-        ----------
-        tab_name : str
-            name of the tab where plot should be added to
-        data : dict
-            dictionary containing appropriate plot fields
-            in this case:
-                x, y = list / array
-            the length of x and y must be the same
-        item_name : str
-            by default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
-            will be added as 'item #0', if there is one then it will be added as 'item #1' etc. Sometimes you might want
-            to add it to a 'row' or 'column' for which you have name - you can specify its name here and if its present
-            the plot object will be added to that container
-        kwargs :
-            dictionary containing plot parameters e.g. x/y axis labels, title, etc...
-
-        Returns
-        -------
-        tab_name : str
-            name of the tab
-        item_name : str
-            name of the plot
-        plot : PlotMobilogram
-            plot object
-        """
-        assert isinstance(data, dict)
-        self.check_tab(tab_name)
-        self.check_data(data, ("x", "y"))
-
-        source = ColumnDataSource(data)
-        plot = PlotMobilogram(self.output_dir, source=source, **kwargs)
-
-        # add figure object to tab
-        item_name = item_name if item_name is not None else self.get_unique_name(tab_name)
-        self.append_item(tab_name, item_name, plot)
-        return tab_name, item_name, plot
-
-    def plot_butterfly_mobilogram(self, tab_name, data, item_name=None, **kwargs):
-        """Adds butterfly mobilograms to the plot store (one on top / one below)
-
-        Parameters
-        ----------
-        tab_name : str
-            name of the tab where plot should be added to
-        data : dict
-            Dictionary containing appropriate plot fields, in this case:
-                x_top, y_top, x_bottom, y_bottom = list / array
-            the length of x_top and y_top, x_bottom and y_bottom must be the same.
-        item_name : str
-            by default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
-            will be added as 'item #0', if there is one then it will be added as 'item #1' etc. Sometimes you might want
-            to add it to a 'row' or 'column' for which you have name - you can specify its name here and if its present
-            the plot object will be added to that container
-        kwargs :
-            dictionary containing plot parameters e.g. x/y axis labels, title, etc...
-
-        Returns
-        -------
-        tab_name : str
-            name of the tab
-        item_name : str
-            name of the plot
-        plot : PlotButterflyMobilogram
-            plot object
-        """
-        assert isinstance(data, dict)
-        self.check_tab(tab_name)
-        self.check_data(data, ("x_top", "y_top", "x_bottom", "y_bottom"))
-
-        source = ColumnDataSource(data)
-        plot = PlotButterflyMobilogram(self.output_dir, source=source, **kwargs)
-
-        # add figure object to tab
-        item_name = item_name if item_name is not None else self.get_unique_name(tab_name)
-        self.append_item(tab_name, item_name, plot)
-        return tab_name, item_name, plot
-
-    def plot_multiline_spectrum(self, tab_name, data, item_name=None, **kwargs):
+    def plot_multiline_spectrum(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
         """Adds multiple-lines to the same plot area
 
         Parameters
@@ -633,16 +413,14 @@ class PlotStore:
         tab_name : str
             name of the tab where plot should be added to
         data : dict
-            dictionary containing appropriate plot fields
-            in this case:
-                xs = list / array
-                ys = list / array
+            Dictionary containing appropriate plot fields, in this case:
+                xs, ys = list / array
             the length of x and y must be the same
-        item_name : str
-            by default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
+        layout_name : str
+            By default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
             will be added as 'item #0', if there is one then it will be added as 'item #1' etc. Sometimes you might want
             to add it to a 'row' or 'column' for which you have name - you can specify its name here and if its present
-            the plot object will be added to that container
+            the plot object will be added to that container.
         kwargs :
             dictionary containing plot parameters e.g. x/y axis labels, title, etc...
 
@@ -655,7 +433,6 @@ class PlotStore:
         plot : PlotMultiLine
             plot object
         """
-        assert isinstance(data, dict)
         self.check_tab(tab_name)
         self.check_data(data, ("xs", "ys"))
 
@@ -663,11 +440,11 @@ class PlotStore:
         plot = PlotMultiLine(self.output_dir, source=source, **kwargs)
 
         # add figure object to tab
-        item_name = item_name if item_name is not None else self.get_unique_name(tab_name)
-        self.append_item(tab_name, item_name, plot)
-        return tab_name, item_name, plot
+        layout_name = layout_name if layout_name is not None else self.get_unique_name(tab_name)
+        self.append_item(tab_name, layout_name, plot)
+        return tab_name, layout_name, plot
 
-    def plot_image(self, tab_name, data, item_name=None, **kwargs):
+    def plot_image(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
         """Adds image to the plot store
 
         Parameters
@@ -675,11 +452,10 @@ class PlotStore:
         tab_name : str
             name of the tab where plot should be added to
         data : dict
-            dictionary containing appropriate plot fields
-            in this case:
-                image = 2D array
-            the 'image' item must be embedded in a list otherwise you will be greeted with nasty exception
-        item_name : str
+            Dictionary containing appropriate plot fields, in this case:
+                image = list with single array
+            If the `image` item is not provided as list with single array then it will be automatically placed there.
+        layout_name : str
             by default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
             will be added as 'item #0', if there is one then it will be added as 'item #1' etc. Sometimes you might want
             to add it to a 'row' or 'column' for which you have name - you can specify its name here and if its present
@@ -696,7 +472,6 @@ class PlotStore:
         plot : PlotImage
             plot object
         """
-        assert isinstance(data, dict)
         self.check_tab(tab_name)
         self.check_data(data, ("image",))
         # Bokeh expects nested list to plat an image
@@ -707,11 +482,11 @@ class PlotStore:
         plot = PlotImage(self.output_dir, source=source, **kwargs)
 
         # add figure object to tab
-        item_name = item_name if item_name is not None else self.get_unique_name(tab_name)
-        self.append_item(tab_name, item_name, plot)
-        return tab_name, item_name, plot
+        layout_name = layout_name if layout_name is not None else self.get_unique_name(tab_name)
+        self.append_item(tab_name, layout_name, plot)
+        return tab_name, layout_name, plot
 
-    def plot_rgb_image(self, tab_name, data, item_name=None, **kwargs):
+    def plot_rgb_image(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
         """Adds RGBA image to the plot store
 
         Parameters
@@ -723,7 +498,7 @@ class PlotStore:
             in this case:
                 image = 3D array
             the 'image' item must be embedded in a list otherwise you will be greeted with nasty exception
-        item_name : str
+        layout_name : str
             by default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
             will be added as 'item #0', if there is one then it will be added as 'item #1' etc. Sometimes you might want
             to add it to a 'row' or 'column' for which you have name - you can specify its name here and if its present
@@ -740,7 +515,6 @@ class PlotStore:
         plot : Plot
             plot object
         """
-        assert isinstance(data, dict)
         self.check_tab(tab_name)
         self.check_data(data, ("image",))
         # Bokeh expects nested list to plat an image
@@ -751,11 +525,11 @@ class PlotStore:
         plot = PlotImageRGBA(self.output_dir, source=source, **kwargs)
 
         # add figure object to tab
-        item_name = item_name if item_name is not None else self.get_unique_name(tab_name)
-        self.append_item(tab_name, item_name, plot)
-        return tab_name, item_name, plot
+        layout_name = layout_name if layout_name is not None else self.get_unique_name(tab_name)
+        self.append_item(tab_name, layout_name, plot)
+        return tab_name, layout_name, plot
 
-    def add_line_plot(self, plot, data, **kwargs):
+    def add_line_plot(self, plot, data: ty.Dict, **kwargs):
         """Adds generic spectrum to the plot store
 
         Parameters
@@ -782,7 +556,7 @@ class PlotStore:
         source = ColumnDataSource(data)
         plot.add_plot_line(source, **kwargs)
 
-    def add_band(self, plot, data, **kwargs):
+    def add_band(self, plot, data: ty.Dict, **kwargs):
         """Add band to the plot area to highlight specific region, display standard deviation of display errors
 
         Parameters
@@ -808,14 +582,13 @@ class PlotStore:
         >>> _, _, plot = store.plot_spectrum("plot", dict(x=x, y=y))
         >>> store.add_band(plot, dict(base=x, lower=y-3, upper=y+3))
         """
-        assert isinstance(data, dict)
         if not hasattr(plot, "add_band"):
             raise ValueError("Cannot add band to this plot")
         self.check_data(data, ("base", "lower", "upper"))
         source = ColumnDataSource(data)
         plot.add_band(source, **kwargs)
 
-    def add_span(self, plot, data, **kwargs):
+    def add_span(self, plot, data: ty.Dict, **kwargs):
         """Add span line(s) to the plot area
 
         You can specify multiple lines simultaneously by setting the `location` key to an iterable. In case multiple
@@ -845,13 +618,12 @@ class PlotStore:
         >>> store.add_span(plot, dict(location=1, dimension="height"))
         >>> store.add_span(plot, dict(location=[5, 3], dimension="height"))
         """
-        assert isinstance(data, dict)
         if not hasattr(plot, "add_span"):
             raise ValueError("Cannot add band to this plot")
         self.check_data(data, ("location", "dimension"))
         plot.add_span(data, **kwargs)
 
-    def add_box(self, plot, data, **kwargs):
+    def add_box(self, plot, data: ty.Dict, **kwargs):
         """Add box to the plot area to highlight region of interest
 
         Parameters
@@ -884,13 +656,12 @@ class PlotStore:
         >>> store.add_box(plot, dict(bottom=3, right=7))
         >>> store.add_box(plot, dict(top=4, left=2))
         """
-        assert isinstance(data, dict)
         if not hasattr(plot, "add_box"):
             raise ValueError("Cannot add box to this plot")
         self.check_data(data, ("bottom", "top", "left", "right"))
         plot.add_box(data, **kwargs)
 
-    def add_patch(self, plot, data, **kwargs):
+    def add_patch(self, plot, data: ty.Dict, **kwargs):
         """Add patch/polygon to the plot area to highlight region of interest
 
         Parameters
@@ -908,7 +679,7 @@ class PlotStore:
             raise ValueError("Cannot add box to this plot")
         plot.add_patch(data, **kwargs)
 
-    def add_labels(self, plot, data, **kwargs):
+    def add_labels(self, plot, data: ty.Dict, **kwargs):
         """Add label set to an plot/image
 
         Parameters
@@ -941,12 +712,12 @@ class PlotStore:
         source = ColumnDataSource(data)
         plot.add_labels(source, **kwargs)
 
-    def add_segments(self, plot, data, **kwargs):
+    def add_segments(self, plot: PlotSpectrum, data: ty.Dict, **kwargs):
         """Add label set to an plot/image
 
         Parameters
         ----------
-        plot : Plot
+        plot : PlotSpectrum
             plot object to add the band to
         data : dict
             dictionary containing appropriate plot fields
@@ -968,19 +739,18 @@ class PlotStore:
         >>> _, _, plot = store.plot_spectrum("plot", dict(x=x, y=y))
         >>> store.add_segments(plot, dict(x0=[0, 9], x1=[9, 0], y0=[0, 0], y1=[10, 10]))
         """
-        assert isinstance(data, dict)
         if not hasattr(plot, "add_segments"):
             raise ValueError("Cannot add segments to this plot")
         self.check_data(data, ("x0", "x1", "y0", "y1"))
         source = ColumnDataSource(data)
         plot.add_segments(source, **kwargs)
 
-    def add_centroids_x(self, plot: PlotSpectrum, data, **kwargs):
+    def add_centroids_x(self, plot: PlotSpectrum, data: ty.Dict, **kwargs):
         """Add vertical centroids/lines to a particular plot
 
         Parameters
         ----------
-        plot : Plot
+        plot : PlotSpectrum
             plot object to add the band to
         data : dict
             dictionary containing appropriate plot fields
@@ -1010,12 +780,12 @@ class PlotStore:
         source = ColumnDataSource(data)
         plot.add_centroids_x(source, **kwargs)
 
-    def add_centroids_y(self, plot, data, **kwargs):
+    def add_centroids_y(self, plot: PlotSpectrum, data: ty.Dict, **kwargs):
         """Add horizontal centroids/lines to a particular plot
 
         Parameters
         ----------
-        plot : Plot
+        plot : PlotSpectrum
             plot object to add the band to
         data : dict
             dictionary containing appropriate plot fields
@@ -1036,19 +806,18 @@ class PlotStore:
         >>> _, _, plot = store.plot_spectrum("plot", dict(x=x, y=y))
         >>> store.add_centroids_y(plot, dict(x0=[0, 0, 0], x1=[1, 2, 3], y=[3, 5, 7]))
         """
-        assert isinstance(data, dict)
         if not hasattr(plot, "add_centroids_y"):
             raise ValueError("Cannot add centroids to this plot")
         self.check_data(data, ("y", "x0", "x1"))
         source = ColumnDataSource(data)
         plot.add_centroids_y(source, **kwargs)
 
-    def add_scatter(self, plot, data, **kwargs):
+    def add_scatter(self, plot: PlotSpectrum, data: ty.Dict, **kwargs):
         """Add scatter points to a particular plot
 
         Parameters
         ----------
-        plot : Plot
+        plot : PlotSpectrum
             plot object to add the band to
         data : dict
             dictionary containing appropriate plot fields
@@ -1068,7 +837,6 @@ class PlotStore:
         >>> _, _, plot = store.plot_spectrum("plot", dict(x=x, y=y))
         >>> store.add_scatter(plot, dict(x0=[0, 0, 0], x1=[1, 2, 3], y=[3, 5, 7]))
         """
-        assert isinstance(data, dict)
         if not hasattr(plot, "add_scatter"):
             raise ValueError("Cannot add scatter points to this plot")
         self.check_data(data, ("x", "y"))

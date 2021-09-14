@@ -1,6 +1,7 @@
 """Top-level package for plotski."""
-from .plot import Plot  # noqa
+from .base import Plot  # noqa
 from .store import PlotStore  # noqa
+from .store.custom import CustomPlotStore  # noqa
 
 __author__ = "Lukasz G. Migas"
 __email__ = "l.g.migas@tudelft.nl"

@@ -1,8 +1,60 @@
+[build-system]
+requires = [
+  "setuptools >= 42",
+  "wheel",
+  "setuptools_scm[toml]>=3.4"
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+write_to = "src/plotski/_version.py"
+
 [tool.black]
 line-length = 120
 target-version = ['py36', 'py37', 'py38']
 include = '\.pyi?$'
+exclude = '''
+(
+  /(
+      \.eggs
+    | \.git
+    | \.hg
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | build
+    | dist
+  )/
+)
+'''
+
+[tool.check-manifest]
+ignore = [
+  ".pre-commit-config.yaml",
+  "asv.conf.json",
+  "codecov.yml",
+  "Makefile",
+  "mypy.ini",
+  "src/plotski/_version.py",  # added during build by setuptools_scm
+  "tox.ini",
+  "*.pyi",  # added by make typestubs
+]
 
 [tool.isort]
 profile = "black"
 line_length = 120
+
+[tool.pytest.ini_options]
+# These follow standard library warnings filters syntax.  See more here:
+# https://docs.python.org/3/library/warnings.html#describing-warning-filters
+addopts = "--maxfail=5 --durations=5"
+
+# NOTE: only put things that will never change in here.
+# plotski deprecation and future warnings should NOT go in here.
+# instead... assert the warning with `pytest.warns()` in the relevant test,
+# That way we can clean them up when no longer necessary
+filterwarnings = [
+  "error:::plotski", # turn warnings from plotski into errors
+  "ignore:numpy.ufunc size changed:RuntimeWarning",
+]

@@ -118,10 +118,8 @@ def check_source(source, keys):
     for key in keys:
         if key not in source.data:
             missing.append(key)
-
     if missing:
-        missing = ", ".join(missing)
-        raise ValueError(f"Missing '{missing}' from the ColumnDataSource")
+        raise ValueError(f"Missing '{', '.join(missing)}' from the ColumnDataSource")
 
 
 def calculate_aspect_ratio(shape, plot_width):

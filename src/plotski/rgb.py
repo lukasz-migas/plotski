@@ -31,66 +31,63 @@ COLORS = cycle(
 
 
 class ImageRGBA:
-    """RGBA image creator"""
+    """This class simplifies generation of composite images by remapping individual ion images to their respective
+    colors, which can be quite useful when visualising multiple species at the same time.
+
+    Parameters
+    ----------
+    images : List[np.ndarray]
+        list of flat images
+    colors : Optional[List]
+        list of colors - if None have been specified, a set of defaults will be used instead
+
+    Examples
+    --------
+    Generate composite image based on 3 ion images. Here using random integers to illustrate the usage
+
+    >>> np.random.seed(42)
+    >>> images = [np.random.randint(0, 255, (3, 3)) for _ in range(3)]
+    >>> image_rgba = ImageRGBA(images, colors=["#800000", "#9A6324", "#469990"])
+    >>> rgba = image_rgba.rgba
+    >>> rgba
+    array([[[160, 130, 104, 255],
+            [255, 179, 113, 255],
+            [255, 195, 126, 255]],
+    <BLANKLINE>
+           [[ 15,  33,  31, 255],
+            [208,  90,  32, 255],
+            [ 81,  64,  55, 255]],
+    <BLANKLINE>
+           [[244, 182, 154, 255],
+            [ 77, 119, 102, 255],
+            [106,  43,  29, 255]]], dtype=uint8)
+
+    You can also generate RGB image based on single ion image without the alpha channel
+
+    >>> np.random.seed(42)
+    >>> images = [np.random.randint(0, 255, (3, 3))]
+    >>> image_rgba = ImageRGBA(images, colors=["#800000"])
+    >>> rgb = image_rgba.rgb
+    >>> rgb
+    array([[[ 64,   0,   0],
+            [120,   0,   0],
+            [ 57,   0,   0]],
+    <BLANKLINE>
+           [[  0,   0,   0],
+            [ 67,   0,   0],
+            [ 41,   0,   0]],
+    <BLANKLINE>
+           [[128,   0,   0],
+            [  4,   0,   0],
+            [ 64,   0,   0]]], dtype=uint8)
+    """
 
     def __init__(self, images: ty.List[np.ndarray], colors: ty.Optional[ty.List] = None):
-        """Class to quickly generate composite RGBA images based on ion (or other) images
-
-        This class simplifies generation of composite images by remapping individual ion images to their respective
-        colors, which can be quite useful when visualising multiple species at the same time.
-
-        Parameters
-        ----------
-        images : List[np.ndarray]
-            list of flat images
-        colors : Optional[List]
-            list of colors - if None have been specified, a set of defaults will be used instead
-
-        Examples
-        --------
-        Generate composite image based on 3 ion images. Here using random integers to illustrate the usage
-
-        >>> np.random.seed(42)
-        >>> images = [np.random.randint(0, 255, (3, 3)) for _ in range(3)]
-        >>> image_rgba = ImageRGBA(images, colors=["#800000", "#9A6324", "#469990"])
-        >>> rgba = image_rgba.rgba
-        >>> rgba
-        array([[[160, 130, 104, 255],
-                [255, 179, 113, 255],
-                [255, 195, 126, 255]],
-        <BLANKLINE>
-               [[ 15,  33,  31, 255],
-                [208,  90,  32, 255],
-                [ 81,  64,  55, 255]],
-        <BLANKLINE>
-               [[244, 182, 154, 255],
-                [ 77, 119, 102, 255],
-                [106,  43,  29, 255]]], dtype=uint8)
-
-        You can also generate RGB image based on single ion image without the alpha channel
-
-        >>> np.random.seed(42)
-        >>> images = [np.random.randint(0, 255, (3, 3))]
-        >>> image_rgba = ImageRGBA(images, colors=["#800000"])
-        >>> rgb = image_rgba.rgb
-        >>> rgb
-        array([[[ 64,   0,   0],
-                [120,   0,   0],
-                [ 57,   0,   0]],
-        <BLANKLINE>
-               [[  0,   0,   0],
-                [ 67,   0,   0],
-                [ 41,   0,   0]],
-        <BLANKLINE>
-               [[128,   0,   0],
-                [  4,   0,   0],
-                [ 64,   0,   0]]], dtype=uint8)
-
-        """
+        """Class to quickly generate composite RGBA images based on ion (or other) images"""
         self.validate(images, colors)
 
         self._original, self._images, self._colors = self.setup(images, colors)
-        self._rgba = None
+        self._rgba: ty.Optional[np.ndarray] = None
 
     def __repr__(self):
         return f"ImageRGBA <images={len(self._images)}>"
@@ -123,7 +120,7 @@ class ImageRGBA:
         return self._rgba
 
     @rgba.setter
-    def rgba(self, array: np.ndarray):
+    def rgba(self, array: ty.Optional[np.ndarray]):
         if array is not None and array.shape[2] != 4:
             raise ValueError("Cannot set RGBA array without the alpha channel")
         self._rgba = array
@@ -179,7 +176,7 @@ class ImageRGBA:
 
     def setup(
         self, images: ty.List[np.ndarray], colors: ty.Optional[ty.List[str]]
-    ) -> ty.Tuple[ty.List, ty.List, ty.Iterable]:
+    ) -> ty.Tuple[ty.List, ty.List, ty.List]:
         """Clean-up and remap images to appropriate color
 
         Parameters
@@ -266,7 +263,7 @@ class ImageRGBA:
         self._images[image_id] = self._to_rgb(self._original[image_id], self._convert_color(color))
         self.reset()
 
-    def get_one(self, image_id: int, keep_alpha: bool = False, dtype=np.uint8, fill_alpha: int = None):
+    def get_one(self, image_id: int, keep_alpha: bool = False, dtype=np.uint8, fill_alpha: ty.Optional[int] = None):
         """Retrieve single 3/4D image
 
         Parameters
@@ -295,7 +292,7 @@ class ImageRGBA:
             return image
         return self._images[image_id][:, :, :3].astype(dtype)
 
-    def get_rgba(self, fill_alpha: int = None):
+    def get_rgba(self, fill_alpha: ty.Optional[int] = None):
         """Retrieve RGBA image"""
         image = self.rgba
         if fill_alpha is not None and isinstance(fill_alpha, int):
