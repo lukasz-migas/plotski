@@ -1,8 +1,8 @@
 # Third-party imports
 import numpy as np
 import pytest
-from numpy.testing import assert_array_equal
 from matplotlib.colors import ListedColormap
+from numpy.testing import assert_array_equal
 
 # Local imports
 from plotski.rgb import ImageRGBA

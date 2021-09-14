@@ -10,7 +10,7 @@ from bokeh.models.mappers import LinearColorMapper
 
 
 def convert_colormap_to_mapper(array, colormap="viridis", palette=None, z_min=None, z_max=None):
-    """Convert matplotlib colormap to Bokeh colormapper
+    """Convert matplotlib colormap to Bokeh color mapper
 
     Parameters
     ----------

@@ -3,11 +3,13 @@ from bokeh.models import HoverTool, Legend, Range1d
 from bokeh.plotting import figure
 
 from .plot import Plot
-from .utilities import check_key, check_source
+from .utilities import check_key
 
 
 class PlotSpectrum(Plot):
     """Basic Spectrum plot"""
+
+    DATA_KEYS = ("x", "y")
 
     def __init__(
         self,
@@ -18,52 +20,42 @@ class PlotSpectrum(Plot):
         title="Spectrum",
         plot_type="spectrum",
         initialize=True,
-        **options,
+        **kwargs,
     ):
-        Plot.__init__(self, output_dir, x_axis_label, y_axis_label, title=title, **options)
-        self.plot_type = plot_type
-
-        # set source
-        self.source = source
-        self.check_data_source()
-
-        # initialize options
-        self.initialize_options()
-
-        # initialize figure
-        self.figure = figure(
-            tools=self.options["tools"],
-            active_drag=self.options["active_drag"],
-            x_range=self.options.get("x_range", None),
-            y_range=self.options.get("y_range", None),
-        )
-
-        # add plot
-        self.add_plot_data()
+        Plot.__init__(self, output_dir, source, x_axis_label, y_axis_label, title=title, plot_type=plot_type, **kwargs)
 
         # set plot layout and misc data
         if initialize:
-            self.set_ranges(**options)
+            self.set_ranges(**kwargs)
         self.set_hover()
         self.set_figure_attributes()
         self.set_options()
         self.set_figure_dimensions()
         self.set_layout()
 
-    def add_plot_data(self):
+    def plot(self):
         """Add plot data"""
         line = self.figure.line(
             x="x",
             y="y",
             source=self.source,
-            line_width=self.options["line_width"],
-            line_dash=self.options.get("line_dash", "solid"),
-            color=self.options["line_color"],
-            alpha=self.options["line_alpha"],
+            line_width=self.kwargs["line_width"],
+            line_dash=self.kwargs.get("line_dash", "solid"),
+            color=self.kwargs["line_color"],
+            alpha=self.kwargs["line_alpha"],
             name=self.plot_type,
         )
         self.plots[line.id] = line
         self.add_extents(self.source.data["x"], self.source.data["y"])
+
+    def get_figure(self):
+        """Create figure."""
+        return figure(
+            tools=self.kwargs["tools"],
+            active_drag=self.kwargs["active_drag"],
+            x_range=self.kwargs.get("x_range", None),
+            y_range=self.kwargs.get("y_range", None),
+        )
 
     def add_legend(self):
         """Add legend to the plot area"""
@@ -71,7 +63,7 @@ class PlotSpectrum(Plot):
 
     def set_options(self):
         """Set options"""
-        if self.options.get("add_legend", False):
+        if self.kwargs.get("add_legend", False):
             self.add_legend()
 
     def set_hover(self):
@@ -87,34 +79,30 @@ class PlotSpectrum(Plot):
 
     def set_figure_dimensions(self):
         """Specify figure dimensions"""
-        self.figure.plot_width = self.options.get("plot_width", 800)
-        self.figure.plot_height = self.options.get("plot_height", 400)
+        self.figure.plot_width = self.kwargs.get("plot_width", 800)
+        self.figure.plot_height = self.kwargs.get("plot_height", 400)
 
     def initialize_options(self):
         """Convenience function to handle various options set by the user"""
-        if "line_width" not in self.options:
-            self.options["line_width"] = 1.5
-        if "line_color" not in self.options:
-            self.options["line_color"] = "#000000"
-        if "line_alpha" not in self.options:
-            self.options["line_alpha"] = 1.0
-        if "tools" not in self.options:
-            self.options["tools"] = ("pan, xpan, xbox_zoom, box_zoom, crosshair, reset",)
-        if "active_drag" not in self.options:
-            self.options["active_drag"] = "xbox_zoom"
+        if "line_width" not in self.kwargs:
+            self.kwargs["line_width"] = 1.5
+        if "line_color" not in self.kwargs:
+            self.kwargs["line_color"] = "#000000"
+        if "line_alpha" not in self.kwargs:
+            self.kwargs["line_alpha"] = 1.0
+        if "tools" not in self.kwargs:
+            self.kwargs["tools"] = ("pan, xpan, xbox_zoom, box_zoom, crosshair, reset",)
+        if "active_drag" not in self.kwargs:
+            self.kwargs["active_drag"] = "xbox_zoom"
 
     def set_ranges(self, **kwargs):
         """Set range based on data source"""
         # update x/y ranges
         x_min, x_max, y_min, y_max = self.get_extents(**kwargs)
-        if "x_range" not in self.options:
+        if "x_range" not in self.kwargs:
             self.figure.x_range = Range1d(x_min, x_max)
-        if "y_range" not in self.options:
+        if "y_range" not in self.kwargs:
             self.figure.y_range = Range1d(y_min, y_max)
-
-    def check_data_source(self):
-        """Ensure that each field in the data source is correct"""
-        check_source(self.source, ["x", "y"])
 
     def add_plot_line(self, source, **kwargs):
         """Add plot"""
@@ -128,7 +116,6 @@ class PlotSpectrum(Plot):
             # alpha=self.options["line_alpha"],
             # name=self.plot_type,
         )
-        # self.figure.segment(x0="x0", y0="y0", x1="x1", y1="y1", source=source, **kwargs)
         self.plots[line.id] = (source, "Line")
         self.add_extents(source.data["x"], source.data["y"])
 
@@ -156,6 +143,8 @@ class PlotSpectrum(Plot):
 class PlotCentroid(PlotSpectrum):
     """Basic centroid plot"""
 
+    DATA_KEYS = ("x", "y0", "y1")
+
     def __init__(
         self,
         output_dir,
@@ -164,7 +153,7 @@ class PlotCentroid(PlotSpectrum):
         y_axis_label="y",
         title="Centroid Spectrum",
         plot_type="centroid-spectrum",
-        **options,
+        **kwargs,
     ):
         PlotSpectrum.__init__(
             self,
@@ -174,10 +163,10 @@ class PlotCentroid(PlotSpectrum):
             y_axis_label=y_axis_label,
             title=title,
             plot_type=plot_type,
-            **options,
+            **kwargs,
         )
 
-    def add_plot_data(self):
+    def plot(self):
         """Add plot data"""
         centroid = self.figure.segment(
             x0="x",
@@ -185,9 +174,9 @@ class PlotCentroid(PlotSpectrum):
             x1="x",
             y1="y1",
             source=self.source,
-            line_width=self.options["line_width"],
-            color=self.options["line_color"],
-            alpha=self.options["line_alpha"],
+            line_width=self.kwargs["line_width"],
+            color=self.kwargs["line_color"],
+            alpha=self.kwargs["line_alpha"],
             name=self.plot_type,
         )
         self.plots[centroid.id] = centroid
@@ -202,10 +191,6 @@ class PlotCentroid(PlotSpectrum):
                 line_policy="none",
             )
         )
-
-    def check_data_source(self):
-        """Ensure that each field in the data source is correct"""
-        check_source(self.source, ["x", "y0", "y1"])
 
     def set_ranges(self, **kwargs):
         """Set ranges"""
@@ -225,7 +210,7 @@ class PlotCentroidMassSpectrum(PlotCentroid):
         x_axis_label="m/z",
         y_axis_label="Intensity",
         title="Centroid Mass Spectrum",
-        **options,
+        **kwargs,
     ):
         PlotCentroid.__init__(
             self,
@@ -235,7 +220,7 @@ class PlotCentroidMassSpectrum(PlotCentroid):
             y_axis_label=y_axis_label,
             title=title,
             plot_type="centroid-mass-spectrum",
-            **options,
+            **kwargs,
         )
 
 
@@ -243,7 +228,7 @@ class PlotMassSpectrum(PlotSpectrum):
     """Mass spectrum plot"""
 
     def __init__(
-        self, output_dir, source, x_axis_label="m/z", y_axis_label="Intensity", title="Mass Spectrum", **options
+        self, output_dir, source, x_axis_label="m/z", y_axis_label="Intensity", title="Mass Spectrum", **kwargs
     ):
         # super(PlotMassSpectrum, self).__init__(
         PlotSpectrum.__init__(
@@ -254,7 +239,7 @@ class PlotMassSpectrum(PlotSpectrum):
             y_axis_label=y_axis_label,
             title=title,
             plot_type="mass-spectrum",
-            **options,
+            **kwargs,
         )
 
 
@@ -268,7 +253,7 @@ class PlotMobilogram(PlotSpectrum):
         x_axis_label="Drift time (bins)",
         y_axis_label="Intensity",
         title="Mobilogram",
-        **options,
+        **kwargs,
     ):
         # super(PlotMobilogram, self).__init__(
         PlotSpectrum.__init__(
@@ -279,12 +264,14 @@ class PlotMobilogram(PlotSpectrum):
             y_axis_label=y_axis_label,
             title=title,
             plot_type="mobilogram",
-            **options,
+            **kwargs,
         )
 
 
 class PlotButterflySpectrum(PlotSpectrum):
     """Butterfly plot"""
+
+    DATA_KEYS = ("x_top", "y_top", "x_bottom", "y_bottom")
 
     def __init__(
         self,
@@ -294,9 +281,8 @@ class PlotButterflySpectrum(PlotSpectrum):
         y_axis_label="y",
         title="Butterfly Spectrum",
         plot_type="butterfly-spectrum",
-        **options,
+        **kwargs,
     ):
-        # super(PlotButterflyMassSpectrum, self).__init__(
         PlotSpectrum.__init__(
             self,
             output_dir,
@@ -305,18 +291,18 @@ class PlotButterflySpectrum(PlotSpectrum):
             y_axis_label=y_axis_label,
             title=title,
             plot_type=plot_type,
-            **options,
+            **kwargs,
         )
 
-    def add_plot_data(self):
+    def plot(self):
         """Plot data"""
         line_top = self.figure.line(
             x="x_top",
             y="y_top",
             source=self.source,
-            line_width=self.options["line_width"],
-            color=self.options["line_color"],
-            alpha=self.options["line_alpha"],
+            line_width=self.kwargs["line_width"],
+            color=self.kwargs["line_color"],
+            alpha=self.kwargs["line_alpha"],
             name=self.plot_type + "-top",
         )
         self.plots[line_top.id] = line_top
@@ -324,9 +310,9 @@ class PlotButterflySpectrum(PlotSpectrum):
             x="x_bottom",
             y="y_bottom",
             source=self.source,
-            line_width=self.options["line_width"],
-            color=self.options["line_color"],
-            alpha=self.options["line_alpha"],
+            line_width=self.kwargs["line_width"],
+            color=self.kwargs["line_color"],
+            alpha=self.kwargs["line_alpha"],
             name=self.plot_type + "-bottom",
         )
         self.plots[line_bottom.id] = line_bottom
@@ -352,10 +338,6 @@ class PlotButterflySpectrum(PlotSpectrum):
         y = [min(src["y_top"]), min(src["y_bottom"]), max(src["y_top"]), max(src["y_bottom"])]
         self.figure.x_range = Range1d(min(x), max(x))
         self.figure.y_range = Range1d(min(y) * 1.05, max(y) * 1.05)
-
-    def check_data_source(self):
-        """Ensure that each field in the data source is correct"""
-        check_source(self.source, ["x_top", "x_bottom", "y_top", "y_bottom"])
 
     def set_hover(self):
         """Set hover"""
@@ -393,7 +375,7 @@ class PlotButterflyMassSpectrum(PlotButterflySpectrum):
         x_axis_label="m/z",
         y_axis_label="Intensity",
         title="Butterfly Mass Spectrum",
-        **options,
+        **kwargs,
     ):
         PlotButterflySpectrum.__init__(
             self,
@@ -403,7 +385,7 @@ class PlotButterflyMassSpectrum(PlotButterflySpectrum):
             y_axis_label=y_axis_label,
             title=title,
             plot_type="butterfly-mass-spectrum",
-            **options,
+            **kwargs,
         )
 
 
@@ -417,7 +399,7 @@ class PlotButterflyMobilogram(PlotButterflySpectrum):
         x_axis_label="Drift time (bins)",
         y_axis_label="Intensity",
         title="Butterfly Mobilogram",
-        **options,
+        **kwargs,
     ):
         PlotButterflySpectrum.__init__(
             self,
@@ -427,12 +409,14 @@ class PlotButterflyMobilogram(PlotButterflySpectrum):
             y_axis_label=y_axis_label,
             title=title,
             plot_type="butterfly-mobilogram",
-            **options,
+            **kwargs,
         )
 
 
 class PlotMultiLine(PlotSpectrum):
     """Basic multiline spectrum"""
+
+    DATA_KEYS = ("xs", "ys")
 
     def __init__(
         self,
@@ -442,7 +426,7 @@ class PlotMultiLine(PlotSpectrum):
         y_axis_label="y",
         title="Multi-line",
         plot_type="multiline-spectrum",
-        **options,
+        **kwargs,
     ):
         PlotSpectrum.__init__(
             self,
@@ -452,18 +436,18 @@ class PlotMultiLine(PlotSpectrum):
             y_axis_label=y_axis_label,
             title=title,
             plot_type=plot_type,
-            **options,
+            **kwargs,
         )
 
-    def add_plot_data(self):
+    def plot(self):
         """Plot data"""
         multiline = self.figure.multi_line(
             xs="xs",
             ys="ys",
             source=self.source,
-            line_width=self.options["line_width"],
-            color=self.options["line_color"] if not check_key(self.source, "colors") else "colors",
-            alpha=self.options["line_alpha"] if not check_key(self.source, "alpha") else "alpha",
+            line_width=self.kwargs["line_width"],
+            color=self.kwargs["line_color"] if not check_key(self.source, "colors") else "colors",
+            alpha=self.kwargs["line_alpha"] if not check_key(self.source, "alpha") else "alpha",
             name=self.plot_type,
         )
         self.plots[multiline.id] = multiline
@@ -481,10 +465,6 @@ class PlotMultiLine(PlotSpectrum):
         # self.figure.x_range = Range1d(min(x), max(x))
         # self.figure.y_range = Range1d(min(y) * 1.05, max(y) * 1.05)
 
-    def check_data_source(self):
-        """Ensure that each field in the data source is correct"""
-        check_source(self.source, ["xs", "ys"])
-
     def set_hover(self):
         """Set hover"""
         tooltips = [
@@ -494,4 +474,10 @@ class PlotMultiLine(PlotSpectrum):
         if check_key(self.source, "line_id"):
             tooltips.append(("Line ID", "@line_id"))
 
-        self.figure.add_tools(HoverTool(show_arrow=True, tooltips=tooltips, line_policy="next",))
+        self.figure.add_tools(
+            HoverTool(
+                show_arrow=True,
+                tooltips=tooltips,
+                line_policy="next",
+            )
+        )

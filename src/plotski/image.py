@@ -1,11 +1,7 @@
-# Standard library imports
-
-# Third-party imports
 import numpy as np
 from bokeh.models import BasicTicker, ColorBar, HoverTool, Range1d
 from bokeh.plotting import figure
 
-# Local imports
 from .plot import Plot
 from .utilities import calculate_aspect_ratio
 
@@ -13,55 +9,46 @@ from .utilities import calculate_aspect_ratio
 class PlotImageBase(Plot):
     """Basic heatmap plot"""
 
+    DATA_KEYS = ("image", "x", "y", "dw", "dh")
+
     def __init__(
-        self, output_dir, source, x_axis_label="", y_axis_label="", title="Heatmap", plot_type="heatmap", **options
+        self, output_dir, source, x_axis_label="", y_axis_label="", title="Heatmap", plot_type="heatmap", **kwargs
     ):
-        Plot.__init__(self, output_dir, x_axis_label, y_axis_label, title=title, **options)
-
-        self.plot_type = plot_type
-
-        # set source
-        self.source = source
-        self.check_data_source()
-
-        # initialize options
-        self.initialize_options()
-
-        # initialize figure
-        self.figure = figure(tools=self.options["tools"], active_drag=self.options["active_drag"])
-
-        # add plot
-        self.add_plot_data()
-
+        Plot.__init__(self, output_dir, source, x_axis_label, y_axis_label, title=title, plot_type=plot_type, **kwargs)
         # set plot layout and misc data
-        self.set_ranges(**options)
+        self.set_ranges(**kwargs)
         self.set_hover()
         self.set_figure_attributes()
         self.set_options()
         self.set_figure_dimensions()
         self.set_layout()
 
+    def plot(self):
+        """Main plotting function."""
+        raise NotImplementedError("Must implement method")
+
+    def get_figure(self):
+        """Get figure."""
+        return figure(tools=self.kwargs["tools"], active_drag=self.kwargs["active_drag"])
+
     def initialize_options(self):
         """Setup few options"""
         from .utilities import convert_colormap_to_mapper
 
         # setup some common options if the user has not specified them
-        if "cmap" not in self.options:
-            self.options["cmap"] = "viridis"
+        if "cmap" not in self.kwargs:
+            self.kwargs["cmap"] = "viridis"
 
-        self.options["palette"], self.options["colormapper"] = convert_colormap_to_mapper(
+        self.kwargs["palette"], self.kwargs["colormapper"] = convert_colormap_to_mapper(
             self.source.data["image"][0],
-            self.options["cmap"],
-            z_min=self.options.get("z_min", None),
-            z_max=self.options.get("z_max", None),
+            self.kwargs["cmap"],
+            z_min=self.kwargs.get("z_min", None),
+            z_max=self.kwargs.get("z_max", None),
         )
-        if "tools" not in self.options:
-            self.options["tools"] = ("pan, box_zoom, crosshair, reset",)
-        if "active_drag" not in self.options:
-            self.options["active_drag"] = "box_zoom"
-
-    def add_plot_data(self):
-        raise NotImplementedError("Must implement method")
+        if "tools" not in self.kwargs:
+            self.kwargs["tools"] = ("pan, box_zoom, crosshair, reset",)
+        if "active_drag" not in self.kwargs:
+            self.kwargs["active_drag"] = "box_zoom"
 
     def set_hover(self):
         self.figure.add_tools(
@@ -76,9 +63,9 @@ class PlotImageBase(Plot):
 
         # update x/y ranges
         src = self.source.data
-        x_range = self.options.get("x_range", (0, src["image"][0].shape[1]))
+        x_range = self.kwargs.get("x_range", (0, src["image"][0].shape[1]))
         self.figure.x_range = Range1d(*x_range)
-        y_range = self.options.get("y_range", (0, src["image"][0].shape[0]))
+        y_range = self.kwargs.get("y_range", (0, src["image"][0].shape[0]))
         self.figure.y_range = Range1d(*y_range)
 
     def set_figure_dimensions(self):
@@ -87,8 +74,8 @@ class PlotImageBase(Plot):
             _ratio = 600 / plot_height
             plot_height = 600
             plot_width = int(plot_width * _ratio)
-        self.figure.plot_width = self.options.get("plot_width", plot_width)
-        self.figure.plot_height = self.options.get("plot_height", plot_height)
+        self.figure.plot_width = self.kwargs.get("plot_width", plot_width)
+        self.figure.plot_height = self.kwargs.get("plot_height", plot_height)
 
     def check_data_source(self):
         """Ensure that each field in the data source is correct"""
@@ -105,13 +92,17 @@ class PlotImageBase(Plot):
             self.source.data["dw"] = [self.source.data["image"][0].shape[1]]
         if "dh" not in self.source.data:
             self.source.data["dh"] = [self.source.data["image"][0].shape[0]]
+        super().check_data_source()
 
 
 class PlotImage(PlotImageBase):
-    def __init__(self, output_dir, source, title="Image", **options):
-        PlotImageBase.__init__(self, output_dir, source=source, title=title, plot_type="image", **options)
+    """Image class"""
 
-    def add_plot_data(self):
+    def __init__(self, output_dir, source, title="Image", **kwargs):
+        PlotImageBase.__init__(self, output_dir, source=source, title=title, plot_type="image", **kwargs)
+
+    def plot(self):
+        """Plot image."""
         self.plots["image"] = self.figure.image(
             x="x",
             y="y",
@@ -119,14 +110,14 @@ class PlotImage(PlotImageBase):
             dh="dh",
             image="image",
             source=self.source,
-            palette=self.options["palette"],
+            palette=self.kwargs["palette"],
             name="image",
         )
-        self.plots["image"].glyph.color_mapper = self.options["colormapper"]
+        self.plots["image"].glyph.color_mapper = self.kwargs["colormapper"]
 
     def add_colorbar(self):
         color_bar = ColorBar(
-            color_mapper=self.options["colormapper"],
+            color_mapper=self.kwargs["colormapper"],
             ticker=BasicTicker(),
             location=(0, 0),
             major_label_text_font_size="10pt",
@@ -135,15 +126,18 @@ class PlotImage(PlotImageBase):
         self.figure.add_layout(color_bar, "right")
 
     def set_options(self):
-        if self.options.get("add_colorbar", False):
+        if self.kwargs.get("add_colorbar", False):
             self.add_colorbar()
 
 
 class PlotImageRGBA(PlotImageBase):
-    def __init__(self, output_dir, source, title="Image-RGBA", **options):
-        PlotImageBase.__init__(self, output_dir, source=source, title=title, plot_type="rgba", **options)
+    """RGB Image class."""
 
-    def add_plot_data(self):
+    def __init__(self, output_dir, source, title="Image-RGBA", **kwargs):
+        PlotImageBase.__init__(self, output_dir, source=source, title=title, plot_type="rgba", **kwargs)
+
+    def plot(self):
+        """Main plotting method."""
         self.plots["rgba"] = self.figure.image_rgba(
             x="x", y="y", dw="dw", dh="dh", image="image", source=self.source, name="rgba"
         )
@@ -157,7 +151,7 @@ class PlotImageRGBA(PlotImageBase):
             raise ValueError("ImageRGBA expects 8-bit values")
 
     def set_hover(self):
-        """Add hover to the image plto"""
+        """Add hover to the image plot."""
         tooltips = [("x, y", "$x{0.00}, $y{0.00}")]
         if "intensity" in self.source.data:
             tooltips.append(("intensity", "@intensity"))

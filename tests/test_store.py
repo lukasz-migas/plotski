@@ -11,6 +11,7 @@ from plotski.store import PlotStore
 
 @pytest.fixture
 def store(tmpdir):
+    """Make store."""
     output_dir = os.path.join(tmpdir, "plot-store")
     os.mkdir(output_dir)
     return PlotStore(output_dir)
@@ -52,7 +53,7 @@ class TestPlotStore:
     def test_add_tab_twice_reset(store):
         tab_name = "TEST"
         store.add_tab(tab_name)
-        store.add_tab(tab_name, reset=True)
+        store.add_tab(tab_name, override=True)
         assert len(store.tabs) == 1
 
     @staticmethod
@@ -221,8 +222,9 @@ class TestPlotStore:
         store.add_span(plot, dict(location=[5, 3], dimension="height"))
         # add box
         store.add_box(plot, dict(bottom=1, right=3, top=4, left=2))
-        store.add_box(plot, dict(bottom=3, right=7))
-        store.add_box(plot, dict(top=4, left=2))
+        with pytest.raises(ValueError):
+            store.add_box(plot, dict(bottom=3, right=7))
+            store.add_box(plot, dict(top=4, left=2))
         # add labels
         store.add_labels(plot, dict(x=[3, 4], y=[3, 4], text=["label 1", "label 2"]))
         # add centroids
@@ -242,8 +244,9 @@ class TestPlotStore:
         store.add_span(plot, dict(location=[5, 3], dimension="height"))
         # add box
         store.add_box(plot, dict(bottom=1, right=3, top=4, left=2))
-        store.add_box(plot, dict(bottom=3, right=7))
-        store.add_box(plot, dict(top=4, left=2))
+        with pytest.raises(ValueError):
+            store.add_box(plot, dict(bottom=3, right=7))
+            store.add_box(plot, dict(top=4, left=2))
         # add labels
         store.add_labels(plot, dict(x=[3, 4], y=[3, 4], text=["label 1", "label 2"]))
 

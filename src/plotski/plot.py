@@ -9,7 +9,7 @@ from bokeh.layouts import column, row
 from bokeh.models import Band, BoxAnnotation, Div, LabelSet, Span
 
 from .enums import Position
-from .utilities import get_min_max
+from .utilities import check_source, get_min_max
 
 
 class Plot:
@@ -17,7 +17,17 @@ class Plot:
 
     _div_title, _div_header, _div_footer = None, None, None
 
-    def __init__(self, output_dir: str, x_axis_label: str = "x", y_axis_label: str = "y", **options):
+    DATA_KEYS = ()
+
+    def __init__(
+        self,
+        output_dir: str,
+        source,
+        x_axis_label: str = "x",
+        y_axis_label: str = "y",
+        plot_type: str = "plot",
+        **kwargs,
+    ):
         """Base class for interactive plots
 
         Note: Not intended to be used directly and instead, please use one of the subclasses which implement the
@@ -33,27 +43,43 @@ class Plot:
             y-axis label
         tools : str
             list of Bokeh tools supplied to the plot
-        options :
+        kwargs :
             dictionary with key:value parameters used to prettify Bokeh plots
         """
         self.name = None
         self.output_dir = output_dir
-        self.plot_type = None
+        self.plot_type = plot_type
         self.plots = dict()
         self.figure = None
         self._layout = None
-        self.source = None
         self.annotations = dict()
-        self.div_title = options.pop("title", "")
-        self.div_header = options.pop("header", "")
-        self._div_header_pos: Position = options.pop("header_pos", Position.ABOVE)
-        self.div_footer = options.pop("footer", "")
+        self.div_title = kwargs.pop("title", "")
+        self.div_header = kwargs.pop("header", "")
+        self._div_header_pos: Position = kwargs.pop("header_pos", Position.ABOVE)
+        self.div_footer = kwargs.pop("footer", "")
         self._x_extents = []
         self._y_extents = []
 
         # plot attributes
-        self.options = options
+        self.kwargs = kwargs
         self.metadata = dict(x_axis_label=x_axis_label, y_axis_label=y_axis_label)
+
+        self.source = source
+        self.check_data_source()
+
+        # initialize options
+        self.initialize_options()
+
+        # initialize figure
+        self.figure = self.get_figure()
+        self.plot()
+
+    def check_data_source(self):
+        """Ensure that each field in the data source is correct"""
+        check_source(self.source, self.DATA_KEYS)
+
+    def initialize_options(self):
+        """Initialize extra options"""
 
     def set_figure_attributes(self):
         """Initialize common plot attributes"""
@@ -141,7 +167,10 @@ class Plot:
         return self._layout
 
     def link_axes(self, x_range=None, y_range=None):
-        """Link x- and/or y-axis ranges to another plot"""
+        """Link x- and/or y-axis ranges to another plot.
+
+        It would appear as you can only link plots during creation and not after they've been rendered.
+        """
         # if x_range:
         #     if hasattr(x_range, "figure"):
         #         x_range.figure.x_range = self.figure.x_range
@@ -224,3 +253,11 @@ class Plot:
         # open figure in browser
         if show:
             webbrowser.open_new_tab(filepath)
+
+    def plot(self):
+        """Main plot method."""
+        raise NotImplementedError("Must implement method")
+
+    def get_figure(self):
+        """Main figure creation method."""
+        raise NotImplementedError("Must implement method")

@@ -1,11 +1,9 @@
 """Bokeh plot store"""
-# Standard library imports
 import math
 import os
+import typing as ty
 import webbrowser
-from typing import List
 
-# Third-party imports
 import numpy as np
 from bokeh.io import save
 from bokeh.layouts import column, gridplot, row
@@ -24,8 +22,6 @@ from .spectrum import (
     PlotMultiLine,
     PlotSpectrum,
 )
-
-# Local imports
 from .utilities import get_unique_str
 
 # TODO: add repr that shows the layout of the store e.g. tab 1 \ plot 1 plot 2 plot 3; tab 2 \ plot 1 plot 2 plot 3
@@ -35,7 +31,7 @@ from .utilities import get_unique_str
 class PlotStore:
     """Main class to generate interactive plots"""
 
-    def __init__(self, output_dir, options=None, filename="figure-store.html", title: str = "Document Store"):
+    def __init__(self, output_dir: str = "", options=None, filename="figure-store.html", title: str = "Document Store"):
         self.output_dir = output_dir
         self.filename = filename
         self.options = options
@@ -74,6 +70,21 @@ class PlotStore:
                 self.add_tab(tab_name)
             else:
                 raise ValueError(f"Missing tab {tab_name}")
+
+    @staticmethod
+    def check_data(data: ty.Dict, keys: ty.Iterable):
+        """Check whether data is a dictionary and contains appropriate data keys."""
+        if not isinstance(data, dict):
+            raise ValueError("Provided value of `data` is incorrect. Expected dictionary.")
+        missing = []
+        for key in keys:
+            if key not in data:
+                missing.append(key)
+        if missing:
+            raise ValueError(
+                f"Provided data is missing some keys. Expected: {', '.join(keys)}."
+                f" Missing keys: {', '.join(missing)}"
+            )
 
     def show(self, tab_names=None, always_as_tabs: bool = True):
         """Return HTML representation of the document"""
@@ -198,14 +209,14 @@ class PlotStore:
             i += 1
         return f"{basename} #{i}"
 
-    def add_tab(self, tab_name: str, reset=False) -> str:
+    def add_tab(self, tab_name: str, override=False) -> str:
         """Add new tab to the document
 
         Parameters
         ----------
         tab_name : str
             name of the tab to be added to the document
-        reset : bool
+        override : bool
             if tab with name `tab_name` already exists and `reset` is set to `True` no exception will be thrown
 
         Returns
@@ -219,7 +230,7 @@ class PlotStore:
             raised if `tab_name` already present in the `self.tabs` container. It will not be thrown if `reset` is set
             to `True
         """
-        if tab_name in self.tabs and not reset:
+        if tab_name in self.tabs and not override:
             raise ValueError(
                 "This tab has previously been added! Please set 'reset' to True if you would like to"
                 " override current container."
@@ -227,57 +238,56 @@ class PlotStore:
         self.tabs[tab_name] = {}
         return tab_name
 
-    def add_tabs(self, tab_names: List[str], reset=False):
+    def add_tabs(self, tab_names: ty.List[str], override=False):
         """Add multiple new tabs to the document
 
         Parameters
         ----------
         tab_names : List[str]
-            list of tab names
-        reset : bool, optional
+            List of tab names.
+        override : bool, optional
             if tab with name `tab_name` already exists and `reset` is set to `True` no exception will be thrown
 
         Raises
         ------
         ValueError
-            raised if `tab_name` already present in the `self.tabs` container. It will not be thrown if `reset` is set
+            Raised if `tab_name` already present in the `self.tabs` container. It will not be thrown if `reset` is set
             to `True
         """
         for tab_name in tab_names:
-            self.add_tab(tab_name, reset)
+            self.add_tab(tab_name, override)
 
     def add_row(self, tab_name: str) -> str:
-        """Add row to particular tab
+        """Add row to particular tab.
 
         Parameters
         ----------
         tab_name : str
-            adds new row to the tab
+            Name of the tab where row should be added.
 
         Returns
         -------
         row_name : str
-            name of the row
+            Name of the generated row container. Name is automatically generated and always unique.
         """
         assert tab_name in self.tabs
 
         row_name = self.get_unique_name(tab_name, "row")
         self.tabs[tab_name][row_name] = []
-
         return row_name
 
     def add_col(self, tab_name: str) -> str:
-        """Add column to particular tab
+        """Add column to particular tab.
 
         Parameters
         ----------
         tab_name : str
-            adds new column to the tab
+            Name of the tab where row should be added.
 
         Returns
         -------
         col_name : str
-            name of the column
+            Name of the generated column container. Name is automatically generated and always unique.
         """
         assert tab_name in self.tabs
 
@@ -286,17 +296,17 @@ class PlotStore:
         return col_name
 
     def add_grid(self, tab_name: str) -> str:
-        """Add column to particular tab
+        """Add grid to particular tab.
 
         Parameters
         ----------
         tab_name : str
-            adds new column to the tab
+            Name of the tab where grid should be added.
 
         Returns
         -------
         grid_name : str
-            name of the column
+            Name of the generated grid container. Name is automatically generated and always unique.
         """
         assert tab_name in self.tabs
 
@@ -304,45 +314,26 @@ class PlotStore:
         self.tabs[tab_name][grid_name] = []
         return grid_name
 
-    def append_item(self, tab_name: str, item_name: str, plot):
+    def append_item(self, tab_name: str, layout_name: str, plot: Plot):
         """Append plot object to tab/item_name so it can be easily retrieved later on
 
         Parameters
         ----------
         tab_name : str
-            name of the tab where plot should be added to
-        item_name : str
-            name of the item (found inside the tab) where plot should be added to
-        plot :
-            plot object
+            Name of the tab where plot should be added to.
+        layout_name : str
+            Name of the layout where plot item should be added to. The layout item is present in particular tab.
+        plot : Plot
+            Plot object that should be added to the layout.
         """
-        assert tab_name in self.tabs
-        if item_name not in self.tabs[tab_name]:
-            self.tabs[tab_name][item_name] = []
+        assert tab_name in self.tabs, f"Tab {tab_name} not found in tabs. Make sure to add it first."
+        if layout_name not in self.tabs[tab_name]:
+            self.tabs[tab_name][layout_name] = []
 
         # set the plot name
         plot.name = get_unique_str()
-        self.tabs[tab_name][item_name].append(plot)
+        self.tabs[tab_name][layout_name].append(plot)
         return plot
-
-    # def update_item(self, tab_name: str, item_name: str, plot):
-    #     """Update item in the store
-    #
-    #     Parameters
-    #     ----------
-    #     tab_name : str
-    #         name of the tab where plot should be added to
-    #     item_name : str
-    #         name of the item (found inside the tab) where plot should be added to
-    #     plot :
-    #         plot object
-    #     """
-    #     assert tab_name in self.tabs
-    #     if item_name not in self.tabs[tab_name]:
-    #         raise ValueError("Cannot update plot if its not in the store!")
-    #
-    #     # set the plot name
-    #     pass
 
     def plot_scatter(self, tab_name, data, item_name=None, **kwargs):
         """Adds generic scatter to the plot store
@@ -374,8 +365,9 @@ class PlotStore:
         plot : Plot
             plot object
         """
-        assert isinstance(data, dict)
+        assert isinstance(data, dict), "Provided data source was incorrect. Expected dictionary"
         self.check_tab(tab_name)
+        self.check_data(data, ("x", "y"))
 
         source = ColumnDataSource(data)
         plot = PlotScatter(self.output_dir, source=source, **kwargs)
@@ -417,6 +409,7 @@ class PlotStore:
         """
         assert isinstance(data, dict)
         self.check_tab(tab_name)
+        self.check_data(data, ("x", "y"))
 
         source = ColumnDataSource(data)
         plot = PlotSpectrum(self.output_dir, source=source, **kwargs)
@@ -458,6 +451,7 @@ class PlotStore:
         """
         assert isinstance(data, dict)
         self.check_tab(tab_name)
+        self.check_data(data, ("x", "y"))
 
         source = ColumnDataSource(data)
         plot = PlotMassSpectrum(self.output_dir, source=source, **kwargs)
@@ -475,11 +469,9 @@ class PlotStore:
         tab_name : str
             name of the tab where plot should be added to
         data : dict
-            dictionary containing appropriate plot fields
-            in this case:
-                x = list / array
-                y = list / array
-            the length of x and y must be the same
+            Dictionary containing appropriate plot fields, in this case:
+                x_top, y_top, x_bottom, y_bottom = list / array
+            the length of x_top and y_top, x_bottom and y_bottom must be the same.
         item_name : str
             by default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
             will be added as 'item #0', if there is one then it will be added as 'item #1' etc. Sometimes you might want
@@ -499,6 +491,7 @@ class PlotStore:
         """
         assert isinstance(data, dict)
         self.check_tab(tab_name)
+        self.check_data(data, ("x_top", "y_top", "x_bottom", "y_bottom"))
 
         source = ColumnDataSource(data=data)
         plot = PlotButterflyMassSpectrum(self.output_dir, source=source, **kwargs)
@@ -516,12 +509,10 @@ class PlotStore:
         tab_name : str
             name of the tab where plot should be added to
         data : dict
-            dictionary containing appropriate plot fields
-            in this case:
-                x = list / array
-                y0 = list / array
-                y1 = list / array
-            the length of x and y must be the same
+            Dictionary containing appropriate plot fields, in this case:
+                x, y0, y1 = list / array
+            the length of x and y0 and y1 must be the same.
+            If y0 is not provided, values will be automatically generated to provide array of 0s
         item_name : str
             by default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
             will be added as 'item #0', if there is one then it will be added as 'item #1' etc. Sometimes you might want
@@ -543,6 +534,7 @@ class PlotStore:
         self.check_tab(tab_name)
         if "y0" not in data:
             data["y0"] = np.zeros_like(data["x"], dtype=np.int8)
+        self.check_data(data, ("x", "y0", "y1"))
 
         source = ColumnDataSource(data)
         plot = PlotCentroidMassSpectrum(self.output_dir, source=source, **kwargs)
@@ -562,8 +554,7 @@ class PlotStore:
         data : dict
             dictionary containing appropriate plot fields
             in this case:
-                x = list / array
-                y = list / array
+                x, y = list / array
             the length of x and y must be the same
         item_name : str
             by default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
@@ -584,6 +575,7 @@ class PlotStore:
         """
         assert isinstance(data, dict)
         self.check_tab(tab_name)
+        self.check_data(data, ("x", "y"))
 
         source = ColumnDataSource(data)
         plot = PlotMobilogram(self.output_dir, source=source, **kwargs)
@@ -601,11 +593,9 @@ class PlotStore:
         tab_name : str
             name of the tab where plot should be added to
         data : dict
-            dictionary containing appropriate plot fields
-            in this case:
-                x = list / array
-                y = list / array
-            the length of x and y must be the same
+            Dictionary containing appropriate plot fields, in this case:
+                x_top, y_top, x_bottom, y_bottom = list / array
+            the length of x_top and y_top, x_bottom and y_bottom must be the same.
         item_name : str
             by default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
             will be added as 'item #0', if there is one then it will be added as 'item #1' etc. Sometimes you might want
@@ -625,6 +615,7 @@ class PlotStore:
         """
         assert isinstance(data, dict)
         self.check_tab(tab_name)
+        self.check_data(data, ("x_top", "y_top", "x_bottom", "y_bottom"))
 
         source = ColumnDataSource(data)
         plot = PlotButterflyMobilogram(self.output_dir, source=source, **kwargs)
@@ -666,6 +657,7 @@ class PlotStore:
         """
         assert isinstance(data, dict)
         self.check_tab(tab_name)
+        self.check_data(data, ("xs", "ys"))
 
         source = ColumnDataSource(data)
         plot = PlotMultiLine(self.output_dir, source=source, **kwargs)
@@ -706,6 +698,10 @@ class PlotStore:
         """
         assert isinstance(data, dict)
         self.check_tab(tab_name)
+        self.check_data(data, ("image",))
+        # Bokeh expects nested list to plat an image
+        if isinstance(data["image"], np.ndarray):
+            data["image"] = [data["image"]]
 
         source = ColumnDataSource(data)
         plot = PlotImage(self.output_dir, source=source, **kwargs)
@@ -746,6 +742,10 @@ class PlotStore:
         """
         assert isinstance(data, dict)
         self.check_tab(tab_name)
+        self.check_data(data, ("image",))
+        # Bokeh expects nested list to plat an image
+        if isinstance(data["image"], np.ndarray):
+            data["image"] = [data["image"]]
 
         source = ColumnDataSource(data)
         plot = PlotImageRGBA(self.output_dir, source=source, **kwargs)
@@ -755,8 +755,7 @@ class PlotStore:
         self.append_item(tab_name, item_name, plot)
         return tab_name, item_name, plot
 
-    @staticmethod
-    def add_line_plot(plot, data, **kwargs):
+    def add_line_plot(self, plot, data, **kwargs):
         """Adds generic spectrum to the plot store
 
         Parameters
@@ -764,10 +763,8 @@ class PlotStore:
         plot : PlotSpectrum
             plot object where line spectrum should be added to
         data : dict
-            dictionary containing appropriate plot fields
-            in this case:
-                x = list / array
-                y = list / array
+            Dictionary containing appropriate plot fields, in this case:
+                x, y = list / array
             the length of x and y must be the same
         kwargs :
             dictionary containing plot parameters e.g. x/y axis labels, title, etc...
@@ -781,11 +778,11 @@ class PlotStore:
         plot : Plot
             plot object
         """
+        self.check_data(data, ("x", "y"))
         source = ColumnDataSource(data)
         plot.add_plot_line(source, **kwargs)
 
-    @staticmethod
-    def add_band(plot, data, **kwargs):
+    def add_band(self, plot, data, **kwargs):
         """Add band to the plot area to highlight specific region, display standard deviation of display errors
 
         Parameters
@@ -807,19 +804,18 @@ class PlotStore:
         >>> import numpy as np
         >>> x = np.arange(10)
         >>> y = np.arange(10)
-        >>> store = PlotStore("NOT A PATH")
+        >>> store = PlotStore("")
         >>> _, _, plot = store.plot_spectrum("plot", dict(x=x, y=y))
         >>> store.add_band(plot, dict(base=x, lower=y-3, upper=y+3))
         """
         assert isinstance(data, dict)
         if not hasattr(plot, "add_band"):
             raise ValueError("Cannot add band to this plot")
-
+        self.check_data(data, ("base", "lower", "upper"))
         source = ColumnDataSource(data)
         plot.add_band(source, **kwargs)
 
-    @staticmethod
-    def add_span(plot, data, **kwargs):
+    def add_span(self, plot, data, **kwargs):
         """Add span line(s) to the plot area
 
         You can specify multiple lines simultaneously by setting the `location` key to an iterable. In case multiple
@@ -843,7 +839,7 @@ class PlotStore:
         >>> import numpy as np
         >>> x = np.arange(10)
         >>> y = np.arange(10)
-        >>> store = PlotStore("NOT A PATH")
+        >>> store = PlotStore("")
         >>> _, _, plot = store.plot_spectrum("plot", dict(x=x, y=y))
         >>> store.add_span(plot, dict(location=1, dimension="width"))
         >>> store.add_span(plot, dict(location=1, dimension="height"))
@@ -852,11 +848,10 @@ class PlotStore:
         assert isinstance(data, dict)
         if not hasattr(plot, "add_span"):
             raise ValueError("Cannot add band to this plot")
-
+        self.check_data(data, ("location", "dimension"))
         plot.add_span(data, **kwargs)
 
-    @staticmethod
-    def add_box(plot, data, **kwargs):
+    def add_box(self, plot, data, **kwargs):
         """Add box to the plot area to highlight region of interest
 
         Parameters
@@ -883,7 +878,7 @@ class PlotStore:
         >>> import numpy as np
         >>> x = np.arange(10)
         >>> y = np.arange(10)
-        >>> store = PlotStore("NOT A PATH")
+        >>> store = PlotStore("")
         >>> _, _, plot = store.plot_spectrum("plot", dict(x=x, y=y))
         >>> store.add_box(plot, dict(bottom=1, right=3, top=4, left=2), line_width=5, line_color="red")
         >>> store.add_box(plot, dict(bottom=3, right=7))
@@ -892,11 +887,10 @@ class PlotStore:
         assert isinstance(data, dict)
         if not hasattr(plot, "add_box"):
             raise ValueError("Cannot add box to this plot")
-
+        self.check_data(data, ("bottom", "top", "left", "right"))
         plot.add_box(data, **kwargs)
 
-    @staticmethod
-    def add_patch(plot, data, **kwargs):
+    def add_patch(self, plot, data, **kwargs):
         """Add patch/polygon to the plot area to highlight region of interest
 
         Parameters
@@ -912,11 +906,9 @@ class PlotStore:
         assert isinstance(data, list)
         if not hasattr(plot, "add_patch"):
             raise ValueError("Cannot add box to this plot")
-
         plot.add_patch(data, **kwargs)
 
-    @staticmethod
-    def add_labels(plot, data, **kwargs):
+    def add_labels(self, plot, data, **kwargs):
         """Add label set to an plot/image
 
         Parameters
@@ -938,19 +930,18 @@ class PlotStore:
         >>> import numpy as np
         >>> x = np.arange(10)
         >>> y = np.arange(10)
-        >>> store = PlotStore("NOT A PATH")
+        >>> store = PlotStore("")
         >>> _, _, plot = store.plot_spectrum("plot", dict(x=x, y=y))
         >>> store.add_labels(plot, dict(x=[3, 4], y=[3, 4], text=["label 1", "label 2"]))
         """
         assert isinstance(data, dict)
         if not hasattr(plot, "add_labels"):
             raise ValueError("Cannot add band to this plot")
-
+        self.check_data(data, ("x", "y", "text"))
         source = ColumnDataSource(data)
         plot.add_labels(source, **kwargs)
 
-    @staticmethod
-    def add_segments(plot, data, **kwargs):
+    def add_segments(self, plot, data, **kwargs):
         """Add label set to an plot/image
 
         Parameters
@@ -973,19 +964,18 @@ class PlotStore:
         >>> import numpy as np
         >>> x = np.arange(10)
         >>> y = np.arange(10)
-        >>> store = PlotStore("NOT A PATH")
+        >>> store = PlotStore("")
         >>> _, _, plot = store.plot_spectrum("plot", dict(x=x, y=y))
         >>> store.add_segments(plot, dict(x0=[0, 9], x1=[9, 0], y0=[0, 0], y1=[10, 10]))
         """
         assert isinstance(data, dict)
         if not hasattr(plot, "add_segments"):
             raise ValueError("Cannot add segments to this plot")
-
+        self.check_data(data, ("x0", "x1", "y0", "y1"))
         source = ColumnDataSource(data)
         plot.add_segments(source, **kwargs)
 
-    @staticmethod
-    def add_centroids_x(plot: PlotSpectrum, data, **kwargs):
+    def add_centroids_x(self, plot: PlotSpectrum, data, **kwargs):
         """Add vertical centroids/lines to a particular plot
 
         Parameters
@@ -1007,7 +997,7 @@ class PlotStore:
         >>> import numpy as np
         >>> x = np.arange(10)
         >>> y = np.arange(10)
-        >>> store = PlotStore("NOT A PATH")
+        >>> store = PlotStore("")
         >>> _, _, plot = store.plot_spectrum("plot", dict(x=x, y=y))
         >>> store.add_centroids_x(plot, dict(x=[1, 2, 3], y0=[0, 0, 0], y1=[3, 5, 7]))
         """
@@ -1016,12 +1006,11 @@ class PlotStore:
             raise ValueError("Cannot add centroids to this plot")
         if "y0" not in data:
             data["y0"] = np.zeros_like(data["x"], dtype=np.int8)
-
+        self.check_data(data, ("x", "y0", "y1"))
         source = ColumnDataSource(data)
         plot.add_centroids_x(source, **kwargs)
 
-    @staticmethod
-    def add_centroids_y(plot, data, **kwargs):
+    def add_centroids_y(self, plot, data, **kwargs):
         """Add horizontal centroids/lines to a particular plot
 
         Parameters
@@ -1043,19 +1032,18 @@ class PlotStore:
         >>> import numpy as np
         >>> x = np.arange(10)
         >>> y = np.arange(10)
-        >>> store = PlotStore("NOT A PATH")
+        >>> store = PlotStore("")
         >>> _, _, plot = store.plot_spectrum("plot", dict(x=x, y=y))
         >>> store.add_centroids_y(plot, dict(x0=[0, 0, 0], x1=[1, 2, 3], y=[3, 5, 7]))
         """
         assert isinstance(data, dict)
         if not hasattr(plot, "add_centroids_y"):
             raise ValueError("Cannot add centroids to this plot")
-
+        self.check_data(data, ("y", "x0", "x1"))
         source = ColumnDataSource(data)
         plot.add_centroids_y(source, **kwargs)
 
-    @staticmethod
-    def add_scatter(plot, data, **kwargs):
+    def add_scatter(self, plot, data, **kwargs):
         """Add scatter points to a particular plot
 
         Parameters
@@ -1076,14 +1064,14 @@ class PlotStore:
         >>> import numpy as np
         >>> x = np.arange(10)
         >>> y = np.arange(10)
-        >>> store = PlotStore("NOT A PATH")
+        >>> store = PlotStore("")
         >>> _, _, plot = store.plot_spectrum("plot", dict(x=x, y=y))
         >>> store.add_scatter(plot, dict(x0=[0, 0, 0], x1=[1, 2, 3], y=[3, 5, 7]))
         """
         assert isinstance(data, dict)
         if not hasattr(plot, "add_scatter"):
             raise ValueError("Cannot add scatter points to this plot")
-
+        self.check_data(data, ("x", "y"))
         source = ColumnDataSource(data)
         plot.add_scatter(source, **kwargs)
 

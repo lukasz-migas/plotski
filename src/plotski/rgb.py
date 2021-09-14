@@ -7,7 +7,6 @@ from matplotlib.colors import ListedColormap
 from skimage import exposure
 from skimage.color import gray2rgb, gray2rgba
 
-# Local imports
 from .utilities import convert_hex_to_rgb_1, rescale
 
 np.seterr(divide="ignore", invalid="ignore")
