@@ -1,5 +1,4 @@
 """Bokeh plot store"""
-import math
 import os
 import typing as ty
 import warnings
@@ -16,13 +15,14 @@ from ..image import PlotImage, PlotImageRGBA
 from ..scatter import PlotScatter
 from ..spectrum.plot import PlotMultiLine, PlotSpectrum
 from ..utilities import get_unique_str
+from .containers import Column, Container, Grid, Individual, Row
 
 # TODO: add repr that shows the layout of the store e.g. tab 1 \ plot 1 plot 2 plot 3; tab 2 \ plot 1 plot 2 plot 3
 # TODO: add option to annotate spectrum and heatmap with rois and/or peaks
 
 
 class PlotStore:
-    """Main class to generate interactive plots"""
+    """Main class that is responsible for managing all plots that should be exported to static HTML document."""
 
     def __init__(self, output_dir: str = "", options=None, filename="figure-store.html", title: str = "Document Store"):
         self.output_dir = output_dir
@@ -33,13 +33,13 @@ class PlotStore:
         self.document_title = title
 
         # store of figures
-        self.tabs: ty.Dict[str, ty.Dict[str, ty.List[Plot]]] = {}
+        self.tabs: ty.Dict[str, ty.Dict[str, Container[Plot]]] = {}
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """Print"""
         return f"PlotStore <tabs={len(self.tabs)}>"
 
-    def __getitem__(self, tab):
+    def __getitem__(self, tab: ty.Union[int, str]):
         """Get tab object"""
         if isinstance(tab, int):
             tab = self.tab_names[tab]
@@ -47,12 +47,12 @@ class PlotStore:
             raise KeyError(f"Tab '{tab}' does not exist")
         return self.tabs[tab]
 
-    def __len__(self):
+    def __len__(self) -> int:
         """Get number of tabs"""
         return len(self.tabs)
 
     @property
-    def tab_names(self):
+    def tab_names(self) -> ty.List[str]:
         """Get list of tab names"""
         return list(self.tabs.keys())
 
@@ -85,11 +85,7 @@ class PlotStore:
 
         return show(self.get_layout(tab_names, always_as_tabs))
 
-    def get(self, **kwargs):
-        """Return HTML representation of the document. Alias for `show`"""
-        return self.get_layout(**kwargs)
-
-    def get_layout(self, tab_names=None, always_as_tabs=True):
+    def get_layout(self, tab_names: ty.Optional[ty.List[str]] = None, always_as_tabs: bool = True):
         """Return fully ordered Bokeh document which can be visualised (using 'show' command) or exported as HTML
 
         Parameters
@@ -125,25 +121,25 @@ class PlotStore:
 
         # initialize panel store
         panels = []
-        for tab_name in tab_names:  # iterate over each tab
+        # iterate over each tab and append the contents. Here, each panel corresponds to single tab
+        for tab_name in tab_names:
             tab_contents = self.tabs[tab_name]
             _tab_contents = []
             # iterate over each object specified in the tab
             for item_name, item_contents in tab_contents.items():
                 # items can be specified as an 'item' (single element)
                 figures = unpack_figures()
-                if item_name.startswith("item"):
+                if isinstance(item_contents, Individual):
                     _tab_contents.extend(figures)
                 # row (multiple elements in a row)
-                elif item_name.startswith("row"):
+                elif isinstance(item_contents, Row):
                     _tab_contents.append(row(figures))
                 # column (multiple elements in a column)
-                elif item_name.startswith("col"):
+                elif isinstance(item_contents, Column):
                     _tab_contents.append(column(figures))
                 # grid (multiple elements in a grid):
-                elif item_name.startswith("grid"):
-                    n_cols = math.ceil(math.sqrt(len(figures)))
-                    _tab_contents.append(gridplot(figures, ncols=n_cols))
+                elif isinstance(item_contents, Grid):
+                    _tab_contents.append(gridplot(figures, ncols=item_contents.n_cols))
 
             if not _tab_contents:
                 print("Tab was empty - not adding it into the HTML document")
@@ -265,7 +261,7 @@ class PlotStore:
         assert tab_name in self.tabs
 
         row_name = self.get_unique_name(tab_name, "row")
-        self.tabs[tab_name][row_name] = []
+        self.tabs[tab_name][row_name] = Row()
         return row_name
 
     def add_col(self, tab_name: str) -> str:
@@ -284,16 +280,19 @@ class PlotStore:
         assert tab_name in self.tabs
 
         col_name = self.get_unique_name(tab_name, "col")
-        self.tabs[tab_name][col_name] = []
+        self.tabs[tab_name][col_name] = Column()
         return col_name
 
-    def add_grid(self, tab_name: str) -> str:
+    def add_grid(self, tab_name: str, n_cols: ty.Optional[int] = None) -> str:
         """Add grid to particular tab.
 
         Parameters
         ----------
         tab_name : str
             Name of the tab where grid should be added.
+        n_cols : int, optional
+            Number of columns the grid should use during rendering. If value is not provided, value will be calculated
+            by rounding square root of the number of contained figures.
 
         Returns
         -------
@@ -303,7 +302,9 @@ class PlotStore:
         assert tab_name in self.tabs
 
         grid_name = self.get_unique_name(tab_name, "grid")
-        self.tabs[tab_name][grid_name] = []
+        grid = Grid()
+        grid.n_cols = n_cols
+        self.tabs[tab_name][grid_name] = grid
         return grid_name
 
     def append_item(self, tab_name: str, layout_name: str, plot: Plot):
@@ -320,7 +321,7 @@ class PlotStore:
         """
         assert tab_name in self.tabs, f"Tab {tab_name} not found in tabs. Make sure to add it first."
         if layout_name not in self.tabs[tab_name]:
-            self.tabs[tab_name][layout_name] = []
+            self.tabs[tab_name][layout_name] = Individual()
 
         # set the plot name
         plot.name = get_unique_str()

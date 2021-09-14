@@ -156,6 +156,16 @@ class Plot:
         self._div_footer = value
 
     @property
+    def x_axis_label(self) -> str:
+        """Get x-axis label."""
+        return self.metadata["x_axis_label"]
+
+    @property
+    def y_axis_label(self) -> str:
+        """Get x-axis label."""
+        return self.metadata["y_axis_label"]
+
+    @property
     def layout(self):
         """Get layout"""
         return self.set_layout()

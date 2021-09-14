@@ -261,8 +261,8 @@ class PlotButterflySpectrum(PlotSpectrum):
             HoverTool(
                 show_arrow=True,
                 tooltips=[
-                    (f"{self.metadata['x_axis_label']}", "@x_top"),
-                    (f"{self.metadata['y_axis_label']}", "@y_top"),
+                    (f"{self.x_axis_label}", "@x_top"),
+                    (f"{self.y_axis_label}", "@y_top"),
                 ],
                 renderers=self.figure.select(name=self.plot_type + "-top"),
                 mode="vline",
@@ -272,8 +272,8 @@ class PlotButterflySpectrum(PlotSpectrum):
             HoverTool(
                 show_arrow=True,
                 tooltips=[
-                    (f"{self.metadata['x_axis_label']}", "@x_bottom"),
-                    (f"{self.metadata['y_axis_label']}", "@y_bottom"),
+                    (f"{self.x_axis_label}", "@x_bottom"),
+                    (f"{self.y_axis_label}", "@y_bottom"),
                 ],
                 renderers=self.figure.select(name=self.plot_type + "-bottom"),
                 mode="vline",
@@ -331,8 +331,8 @@ class PlotMultiLine(PlotSpectrum):
     def set_hover(self):
         """Set hover"""
         tooltips = [
-            (f"{self.metadata['x_axis_label']}", "$data_x"),
-            (f"{self.metadata['y_axis_label']}", "$data_y"),
+            (f"{self.x_axis_label}", "$data_x"),
+            (f"{self.y_axis_label}", "$data_y"),
         ]
         if check_key(self.source, "line_id"):
             tooltips.append(("Line ID", "@line_id"))
