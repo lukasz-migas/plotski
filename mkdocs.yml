@@ -6,7 +6,7 @@ repo_url: https://github.com/lukasz-migas/plotski
 use_directory_urls: true
 
 theme:
-    name: readthedocs
+    name: material
     highlightjs: true
     collapse_navigation: false
     sticky_navigation: true
