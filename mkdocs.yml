@@ -1,0 +1,23 @@
+site_name: Plotski
+site_author: Lukasz G. Migas
+site_description: Documentation of plotski library
+repo_url: https://github.com/lukasz-migas/plotski
+
+use_directory_urls: true
+
+theme:
+    name: readthedocs
+    highlightjs: true
+    collapse_navigation: false
+    sticky_navigation: true
+
+extra_css: [css/style.css]
+
+markdown_extensions:
+    - changelog
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - Usage: usage.md
+  - History: history.md

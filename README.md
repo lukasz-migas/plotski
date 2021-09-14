@@ -1,8 +1,8 @@
 # plotski
 
-![PyPI](https://img.shields.io/pypi/v/plotski.svg)
-![Docs](https://readthedocs.org/projects/plotski/badge/?version=latest)
-![Updates](https://pyup.io/repos/github/lukasz-migas/plotski/shield.svg)
+[![PyPI](https://img.shields.io/pypi/v/plotski.svg)](https://pypi.python.org/pypi/plotski)
+[![Docs](https://readthedocs.org/projects/plotski/badge/?version=latest)](https://plotski.readthedocs.io/en/latest/?version=latest)
+[![Updates](https://pyup.io/repos/github/lukasz-migas/plotski/shield.svg)](https://pyup.io/repos/github/lukasz-migas/plotski/)
 [![tests](https://github.com/lukasz-migas/plotski/actions/workflows/test_and_deploy.yml/badge.svg)](https://github.com/lukasz-migas/plotski/actions/workflows/test_and_deploy.yml)
 
 Package to generate easily generate interactive figures and export them to HTML documents.
