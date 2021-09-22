@@ -44,7 +44,12 @@ class PlotImageBase(Plot):
 
     def get_figure(self):
         """Get figure."""
-        return figure(tools=self.kwargs["tools"], active_drag=self.kwargs["active_drag"])
+        return figure(
+            tools=self.kwargs["tools"],
+            active_drag=self.kwargs["active_drag"],
+            x_range=self.kwargs.get("x_range", None),
+            y_range=self.kwargs.get("y_range", None),
+        )
 
     def initialize_options(self):
         """Setup few options"""
@@ -65,7 +70,10 @@ class PlotImageBase(Plot):
     def set_hover(self):
         """Set hover."""
         self.figure.add_tools(
-            HoverTool(show_arrow=True, tooltips=[("x, y", "$x{0.00}, $y{0.00}"), ("intensity", "@image")])
+            HoverTool(
+                show_arrow=True,
+                tooltips=[("x, y", "$x{0.00}, $y{0.00}"), (self.kwargs.get("hover_label", "intensity"), "@image")],
+            )
         )
 
     def set_ranges(self, **kwargs):
@@ -74,14 +82,23 @@ class PlotImageBase(Plot):
 
         # update x/y ranges
         src = self.source.data
-        x_range = self.kwargs.get("x_range", (0, src["image"][0].shape[1]))
-        self.figure.x_range = Range1d(*x_range)
-        y_range = self.kwargs.get("y_range", (0, src["image"][0].shape[0]))
-        self.figure.y_range = Range1d(*y_range)
+        if "x_range" not in self.kwargs:
+            self.figure.x_range = Range1d(0, src["image"][0].shape[1])
+        if "y_range" not in self.kwargs:
+            self.figure.y_range = Range1d(0, src["image"][0].shape[0])
+        # x_range = self.kwargs.get("x_range", None)
+        # if x_range is None:
+        #     x_range = (0, src["image"][0].shape[1])
+        # self.figure.x_range = Range1d(*x_range) if isinstance(x_range, ty.Iterable) else x_range
+        # y_range = self.kwargs.get("y_range", None)
+        # if y_range is None:
+        #     y_range = (0, src["image"][0].shape[0])
+        # self.figure.y_range = Range1d(*y_range) if isinstance(y_range, ty.Iterable) else y_range
 
     def set_figure_dimensions(self):
         """Set figure dimensions."""
-        plot_height, plot_width = calculate_aspect_ratio(self.source.data["image"][0].shape, 600)
+        plot_width = self.kwargs.get("plot_width", 600)
+        plot_height, plot_width = calculate_aspect_ratio(self.source.data["image"][0].shape, plot_width)
         if plot_height > 600:
             _ratio = 600 / plot_height
             plot_height = 600

@@ -7,7 +7,7 @@ from collections.abc import Iterable
 import numpy as np
 from bokeh.io.export import get_layout_html
 from bokeh.layouts import column, row
-from bokeh.models import Band, BoxAnnotation, ColumnDataSource, Div, LabelSet, Span
+from bokeh.models import Band, BoxAnnotation, ColumnDataSource, Div, Glyph, LabelSet, Span
 
 from .enums import Position
 from .utilities import check_source, get_min_max
@@ -58,7 +58,7 @@ class Plot:
         self.name = None
         self.output_dir = output_dir
         self.plot_type = plot_type
-        self.plots: ty.Dict[str, ty.Tuple[ColumnDataSource, str]] = dict()
+        self.plots: ty.Dict[str, Glyph] = dict()
         self.annotations = dict()
         self._layout = None
         self.div_title = kwargs.pop("title", "")

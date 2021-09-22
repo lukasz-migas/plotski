@@ -42,13 +42,16 @@ class PlotScatter(Plot):
 
     def plot(self):
         """Generate main plot."""
-        self.plots["plot"] = self.figure.scatter(
+        label = self.kwargs.get("label", "")
+        scatter = self.figure.scatter(
             x="x",
             y="y",
             source=self.source,
             name=self.plot_type,
-            legend_label=self.kwargs.get("label", ""),
         )
+        if label:
+            scatter.legend_label = label
+        self.plots[scatter.id] = scatter
 
     def get_figure(self):
         """Get figure."""

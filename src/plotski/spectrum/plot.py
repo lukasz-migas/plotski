@@ -151,6 +151,7 @@ class PlotCentroid(PlotSpectrum):
 
     def plot(self):
         """Add plot data"""
+        label = self.kwargs.get("label", "")
         centroid = self.figure.segment(
             x0="x",
             y0="y0",
@@ -161,8 +162,9 @@ class PlotCentroid(PlotSpectrum):
             color=self.kwargs["line_color"],
             alpha=self.kwargs["line_alpha"],
             name=self.plot_type,
-            legend_label=self.kwargs.get("label", ""),
         )
+        if label:
+            centroid.legend_label = label
         self.plots[centroid.id] = centroid
 
     def set_hover(self):
@@ -180,8 +182,10 @@ class PlotCentroid(PlotSpectrum):
         """Set ranges"""
         # update x/y ranges
         src = self.source.data
-        self.figure.x_range = Range1d(min(src["x"]), max(src["x"]))
-        self.figure.y_range = Range1d(min(src["y0"]), max(src["y1"]) * 1.05)
+        if "x_range" not in self.kwargs:
+            self.figure.x_range = Range1d(min(src["x"]), max(src["x"]))
+        if "y_range" not in self.kwargs:
+            self.figure.y_range = Range1d(min(src["y0"]), max(src["y1"]) * 1.05)
 
 
 class PlotButterflySpectrum(PlotSpectrum):

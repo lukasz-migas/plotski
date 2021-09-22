@@ -13,7 +13,7 @@ from bokeh.models.widgets import Panel, Tabs
 from ..base import Plot
 from ..image import PlotImage, PlotImageRGBA
 from ..scatter import PlotScatter
-from ..spectrum.plot import PlotMultiLine, PlotSpectrum
+from ..spectrum.plot import PlotCentroid, PlotMultiLine, PlotSpectrum
 from ..utilities import get_unique_str
 from .containers import Column, Container, Grid, Individual, Row
 
@@ -406,6 +406,90 @@ class PlotStore:
         self.append_item(tab_name, layout_name, plot)
         return tab_name, layout_name, plot
 
+    def plot_centroids_x(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
+        """Adds generic spectrum to the plot store
+
+        Parameters
+        ----------
+        tab_name : str
+            name of the tab where plot should be added to
+        data : dict
+            Dictionary containing appropriate plot fields, in this case:
+                x, y0, y1 = list / array
+            the length of x and y0 and y1 must be the same.
+            If y0 is not provided, values will be automatically generated to provide array of 0s
+        layout_name : str
+            By default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
+            will be added as 'item #0', if there is one then it will be added as 'item #1' etc. Sometimes you might want
+            to add it to a 'row' or 'column' for which you have name - you can specify its name here and if its present
+            the plot object will be added to that container.
+        kwargs :
+            dictionary containing plot parameters e.g. x/y axis labels, title, etc...
+
+        Returns
+        -------
+        tab_name : str
+            name of the tab
+        item_name : str
+            name of the plot
+        plot : PlotCentroid
+            plot object
+        """
+        self.check_tab(tab_name)
+        if "y0" not in data:
+            data["y0"] = np.zeros_like(data["x"], dtype=np.int8)
+        self.check_data(data, ("x", "y0", "y1"))
+
+        source = ColumnDataSource(data)
+        plot = PlotCentroid(self.output_dir, source=source, **kwargs)
+
+        # add figure object to tab
+        layout_name = layout_name if layout_name is not None else self.get_unique_name(tab_name)
+        self.append_item(tab_name, layout_name, plot)
+        return tab_name, layout_name, plot
+
+    def plot_centroids_y(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
+        """Adds generic spectrum to the plot store
+
+        Parameters
+        ----------
+        tab_name : str
+            name of the tab where plot should be added to
+        data : dict
+            Dictionary containing appropriate plot fields, in this case:
+                x0, x1, y = list / array
+            the length of x and y0 and y1 must be the same.
+            If x0 is not provided, values will be automatically generated to provide array of 0s
+        layout_name : str
+            By default, plot objects are added to the tab in iterative way (e.g. if there are no plots in the tab, it
+            will be added as 'item #0', if there is one then it will be added as 'item #1' etc. Sometimes you might want
+            to add it to a 'row' or 'column' for which you have name - you can specify its name here and if its present
+            the plot object will be added to that container.
+        kwargs :
+            dictionary containing plot parameters e.g. x/y axis labels, title, etc...
+
+        Returns
+        -------
+        tab_name : str
+            name of the tab
+        item_name : str
+            name of the plot
+        plot : PlotCentroid
+            plot object
+        """
+        self.check_tab(tab_name)
+        if "x0" not in data:
+            data["x0"] = np.zeros_like(data["y"], dtype=np.int8)
+        self.check_data(data, ("x0", "x1", "y"))
+
+        source = ColumnDataSource(data)
+        plot = PlotCentroid(self.output_dir, source=source, **kwargs)
+
+        # add figure object to tab
+        layout_name = layout_name if layout_name is not None else self.get_unique_name(tab_name)
+        self.append_item(tab_name, layout_name, plot)
+        return tab_name, layout_name, plot
+
     def plot_multiline_spectrum(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
         """Adds multiple-lines to the same plot area
 
@@ -662,7 +746,7 @@ class PlotStore:
         self.check_data(data, ("bottom", "top", "left", "right"))
         plot.add_box(data, **kwargs)
 
-    def add_patch(self, plot, data: ty.Dict, **kwargs):
+    def add_patch(self, plot, data: ty.List[ty.List], **kwargs):
         """Add patch/polygon to the plot area to highlight region of interest
 
         Parameters
