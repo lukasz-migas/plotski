@@ -7,7 +7,7 @@ from matplotlib.colors import ListedColormap
 from skimage import exposure
 from skimage.color import gray2rgb, gray2rgba
 
-from .utilities import convert_hex_to_rgb_1, rescale
+from plotski.utilities import convert_hex_to_rgb_1, rescale
 
 np.seterr(divide="ignore", invalid="ignore")
 
@@ -117,6 +117,7 @@ class ImageRGBA:
         """Return combined image array with the alpha channel"""
         if self._rgba is None:
             self._rgba = self.combine().astype(np.uint8)
+            self._rgba[:, :, 3] = 255
         return self._rgba
 
     @rgba.setter
@@ -205,6 +206,10 @@ class ImageRGBA:
             _images.append(image)
 
         return images, _images, colors
+
+    def rescale(self, channel_id: int, max_value: ty.Union[int, float] = 255):
+        """Rescale array to standardized range."""
+        return rescale(np.nan_to_num(self._original[channel_id]), 0, max_value)
 
     @staticmethod
     def _to_rgb(

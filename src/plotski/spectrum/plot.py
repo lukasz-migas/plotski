@@ -2,8 +2,8 @@
 from bokeh.models import ColumnDataSource, HoverTool, Legend, Range1d
 from bokeh.plotting import figure
 
-from ..base import Plot
-from ..utilities import check_key
+from plotski.base import Plot
+from plotski.utilities import check_key
 
 
 class PlotSpectrum(Plot):
@@ -62,8 +62,8 @@ class PlotSpectrum(Plot):
         return figure(
             tools=self.kwargs["tools"],
             active_drag=self.kwargs["active_drag"],
-            x_range=self.kwargs.get("x_range", None),
-            y_range=self.kwargs.get("y_range", None),
+            x_range=self.kwargs.get("x_range", Range1d()),
+            y_range=self.kwargs.get("y_range", Range1d()),
         )
 
     def set_hover(self):
@@ -73,7 +73,7 @@ class PlotSpectrum(Plot):
                 show_arrow=True,
                 tooltips=[(f"{self.metadata['x_axis_label']}", "@x"), (f"{self.metadata['y_axis_label']}", "@y")],
                 mode="vline",
-                names=[self.plot_type],
+                # names=[self.plot_type],
             )
         )
 
@@ -92,9 +92,9 @@ class PlotSpectrum(Plot):
         # update x/y ranges
         x_min, x_max, y_min, y_max = self.get_extents(**kwargs)
         if "x_range" not in self.kwargs:
-            self.figure.x_range = Range1d(x_min, x_max)
+            self.figure.x_range.update(start=x_min, end=x_max)
         if "y_range" not in self.kwargs:
-            self.figure.y_range = Range1d(y_min, y_max)
+            self.figure.y_range.update(start=y_min, end=y_max)
 
     def add_plot_line(self, source: ColumnDataSource, **kwargs):
         """Add plot"""
@@ -326,7 +326,13 @@ class PlotMultiLine(PlotSpectrum):
 
     def set_ranges(self, **kwargs):
         """Set plot ranges"""
-        # src = self.source.data
+        src = self.source.data
+        xmin = min([min(x) for x in src["xs"]])
+        xmax = max([max(x) for x in src["xs"]])
+        ymin = min([min(y) for y in src["ys"]])
+        ymax = max([max(y) for y in src["ys"]])
+        self.figure.x_range.update(start=xmin, end=xmax)
+        self.figure.y_range.update(start=ymin, end=ymax)
         # x = [min(src["x_top"]), min(src["x_bottom"]), max(src["x_top"]), max(src["x_bottom"])]
         # y = [min(src["y_top"]), min(src["y_bottom"]), max(src["y_top"]), max(src["y_bottom"])]
         # self.figure.x_range = Range1d(min(x), max(x))
@@ -335,8 +341,8 @@ class PlotMultiLine(PlotSpectrum):
     def set_hover(self):
         """Set hover"""
         tooltips = [
-            (f"{self.x_axis_label}", "$data_x"),
-            (f"{self.y_axis_label}", "$data_y"),
+            (f"{self.x_axis_label}", "x"),
+            (f"{self.y_axis_label}", "y"),
         ]
         if check_key(self.source, "line_id"):
             tooltips.append(("Line ID", "@line_id"))

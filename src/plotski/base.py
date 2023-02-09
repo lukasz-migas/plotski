@@ -9,8 +9,8 @@ from bokeh.io.export import get_layout_html
 from bokeh.layouts import column, row
 from bokeh.models import Band, BoxAnnotation, ColumnDataSource, Div, Glyph, LabelSet, Span
 
-from .enums import Position
-from .utilities import check_source, get_min_max
+from plotski.enums import Position
+from plotski.utilities import check_source, get_min_max
 
 
 class Plot:
@@ -93,8 +93,8 @@ class Plot:
 
     def set_figure_dimensions(self):
         """Set figure dimensions."""
-        self.figure.plot_width = self.kwargs.get("plot_width", self.PLOT_WIDTH)
-        self.figure.plot_height = self.kwargs.get("plot_height", self.PLOT_HEIGHT)
+        self.figure.width = self.kwargs.get("plot_width", self.PLOT_WIDTH)
+        self.figure.height = self.kwargs.get("plot_height", self.PLOT_HEIGHT)
 
     def check_data_source(self):
         """Ensure that each field in the data source is correct"""

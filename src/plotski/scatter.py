@@ -2,7 +2,7 @@
 from bokeh.models import ColumnDataSource, HoverTool, Range1d
 from bokeh.plotting import figure
 
-from .base import Plot
+from plotski.base import Plot
 
 
 class PlotScatter(Plot):

@@ -1,7 +1,7 @@
 """Custom plots."""
 from bokeh.models import ColumnDataSource
 
-from ..spectrum.plot import PlotButterflySpectrum, PlotCentroid, PlotSpectrum
+from plotski.spectrum.plot import PlotButterflySpectrum, PlotCentroid, PlotSpectrum
 
 
 class PlotCentroidMassSpectrum(PlotCentroid):
