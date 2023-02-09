@@ -99,14 +99,14 @@ class PlotImageBase(Plot):
 
     def set_figure_dimensions(self):
         """Set figure dimensions."""
-        plot_width = self.kwargs.get("plot_width", 600)
-        plot_height, plot_width = calculate_aspect_ratio(self.source.data["image"][0].shape, plot_width)
-        if plot_height > 600:
-            _ratio = 600 / plot_height
-            plot_height = 600
-            plot_width = int(plot_width * _ratio)
-        self.figure.plot_width = self.kwargs.get("plot_width", plot_width)
-        self.figure.plot_height = self.kwargs.get("plot_height", plot_height)
+        width = self.kwargs.get("width", 600)
+        height, width = calculate_aspect_ratio(self.source.data["image"][0].shape, width)
+        if height > 600:
+            _ratio = 600 / height
+            height = 600
+            width = int(width * _ratio)
+        self.figure.width = self.kwargs.get("width", width)
+        self.figure.height = self.kwargs.get("height", height)
 
     def check_data_source(self):
         """Ensure that each field in the data source is correct"""

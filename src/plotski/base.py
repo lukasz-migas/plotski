@@ -24,8 +24,8 @@ class Plot:
     ACTIVE_DRAG: ty.Optional[str] = None
 
     # Defaults
-    PLOT_WIDTH = 600
-    PLOT_HEIGHT = 600
+    WIDTH = 600
+    HEIGHT = 600
 
     def __init__(
         self,
@@ -93,8 +93,8 @@ class Plot:
 
     def set_figure_dimensions(self):
         """Set figure dimensions."""
-        self.figure.width = self.kwargs.get("plot_width", self.PLOT_WIDTH)
-        self.figure.height = self.kwargs.get("plot_height", self.PLOT_HEIGHT)
+        self.figure.width = self.kwargs.get("width", self.WIDTH)
+        self.figure.height = self.kwargs.get("height", self.HEIGHT)
 
     def check_data_source(self):
         """Ensure that each field in the data source is correct"""

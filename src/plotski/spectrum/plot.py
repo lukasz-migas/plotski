@@ -15,8 +15,8 @@ class PlotSpectrum(Plot):
     TOOLS = ("pan, xpan, xbox_zoom, box_zoom, crosshair, reset",)
 
     # Defaults
-    PLOT_WIDTH = 800
-    PLOT_HEIGHT = 400
+    WIDTH = 800
+    HEIGHT = 400
 
     def __init__(
         self,

@@ -3,10 +3,21 @@ import random
 import typing as ty
 from uuid import uuid4
 
-import matplotlib.cm as cm
 import matplotlib.colors as colors
 import numpy as np
 from bokeh.models.mappers import LinearColorMapper
+
+
+def get_colormap(cmap: str):
+    """Get matplotlib colormap."""
+    try:
+        import matplotlib as mpl
+
+        return mpl.colormaps[cmap]
+    except ImportError:
+        from matplotlib import cm
+
+        return cm.get_cmap(cmap)
 
 
 def convert_colormap_to_mapper(array, colormap="viridis", palette=None, z_min=None, z_max=None):
@@ -38,7 +49,7 @@ def convert_colormap_to_mapper(array, colormap="viridis", palette=None, z_min=No
         z_max = np.round(np.max(array), 2)
 
     if palette is None:
-        _colormap = cm.get_cmap(colormap)
+        _colormap = get_colormap(colormap)
         _palette = [colors.rgb2hex(m) for m in _colormap(np.arange(_colormap.N))]
     else:
         _palette = palette
@@ -70,7 +81,7 @@ def rescale(values: ty.Union[np.ndarray, ty.List], new_min: float, new_max: floa
     values = np.asarray(values)
     if dtype is None:
         dtype = values.dtype
-    old_min, old_max = values.min(), values.max()
+    old_min, old_max = np.min(values), np.max(values)
     new_values = ((values - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
     return new_values.astype(dtype)
 
@@ -107,6 +118,7 @@ def get_unique_str():
 
 
 def check_key(source, key):
+    """Helper function to check source has a particular field"""
     if key in source.data:
         return True
     return False

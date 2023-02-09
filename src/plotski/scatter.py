@@ -14,8 +14,8 @@ class PlotScatter(Plot):
     ACTIVE_DRAG = "xbox_zoom"
 
     # Defaults
-    PLOT_WIDTH = 800
-    PLOT_HEIGHT = 400
+    WIDTH = 800
+    HEIGHT = 400
 
     def __init__(
         self,
@@ -64,7 +64,7 @@ class PlotScatter(Plot):
                 show_arrow=True,
                 tooltips=[(f"{self.x_axis_label}", "@x"), (f"{self.y_axis_label}", "@y")],
                 mode="vline",
-                names=[self.plot_type],
+                # names=[self.plot_type],
             )
         )
 

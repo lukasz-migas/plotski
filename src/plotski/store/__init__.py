@@ -10,9 +10,14 @@ from bokeh.layouts import column, gridplot, row
 from bokeh.models import ColumnDataSource
 
 try:
-    from bokeh.models.layouts import TabPanel, Tabs
+    from bokeh.models import TabPanel
 except ImportError:
-    from bokeh.models.widgets import Tabs, Panel as TabPanel
+    from bokeh.models.widgets import Panel as TabPanel
+
+try:
+    from bokeh.models import Tabs
+except ImportError:
+    from bokeh.models.widgets import Tabs
 
 from plotski.base import Plot
 from plotski.image import PlotImage, PlotImageRGBA
