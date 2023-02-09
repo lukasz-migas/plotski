@@ -1,10 +1,10 @@
 """Image."""
 import numpy as np
-from bokeh.models import BasicTicker, ColorBar, ColumnDataSource, HoverTool, Range1d
+from bokeh.models import BasicTicker, BoxZoomTool, ColorBar, ColumnDataSource, HoverTool, Range1d
 from bokeh.plotting import figure
 
-from .base import Plot
-from .utilities import calculate_aspect_ratio
+from plotski.base import Plot
+from plotski.utilities import calculate_aspect_ratio
 
 
 class PlotImageBase(Plot):
@@ -12,8 +12,8 @@ class PlotImageBase(Plot):
 
     # Data attributes
     DATA_KEYS = ("image", "x", "y", "dw", "dh")
-    TOOLS = ("pan, box_zoom, crosshair, reset",)
-    ACTIVE_DRAG = "box_zoom"
+    ACTIVE_DRAG = None
+    TOOLS = None
 
     def __init__(
         self,
@@ -26,6 +26,8 @@ class PlotImageBase(Plot):
         initialize: bool = True,
         **kwargs,
     ):
+        self.ACTIVE_DRAG = BoxZoomTool(match_aspect=True)
+        self.TOOLS = ("pan, crosshair, reset", self.ACTIVE_DRAG)
         Plot.__init__(
             self,
             output_dir,
@@ -47,13 +49,13 @@ class PlotImageBase(Plot):
         return figure(
             tools=self.kwargs["tools"],
             active_drag=self.kwargs["active_drag"],
-            x_range=self.kwargs.get("x_range", None),
-            y_range=self.kwargs.get("y_range", None),
+            x_range=self.kwargs.get("x_range", Range1d()),
+            y_range=self.kwargs.get("y_range", Range1d()),
         )
 
     def initialize_options(self):
         """Setup few options"""
-        from .utilities import convert_colormap_to_mapper
+        from plotski.utilities import convert_colormap_to_mapper
 
         # setup some common options if the user has not specified them
         if "cmap" not in self.kwargs:
@@ -83,9 +85,9 @@ class PlotImageBase(Plot):
         # update x/y ranges
         src = self.source.data
         if "x_range" not in self.kwargs:
-            self.figure.x_range = Range1d(0, src["image"][0].shape[1])
+            self.figure.x_range.update(start=0, end=src["image"][0].shape[1])
         if "y_range" not in self.kwargs:
-            self.figure.y_range = Range1d(0, src["image"][0].shape[0])
+            self.figure.y_range.update(start=0, end=src["image"][0].shape[0])
         # x_range = self.kwargs.get("x_range", None)
         # if x_range is None:
         #     x_range = (0, src["image"][0].shape[1])
@@ -97,14 +99,14 @@ class PlotImageBase(Plot):
 
     def set_figure_dimensions(self):
         """Set figure dimensions."""
-        plot_width = self.kwargs.get("plot_width", 600)
-        plot_height, plot_width = calculate_aspect_ratio(self.source.data["image"][0].shape, plot_width)
-        if plot_height > 600:
-            _ratio = 600 / plot_height
-            plot_height = 600
-            plot_width = int(plot_width * _ratio)
-        self.figure.plot_width = self.kwargs.get("plot_width", plot_width)
-        self.figure.plot_height = self.kwargs.get("plot_height", plot_height)
+        width = self.kwargs.get("width", 600)
+        height, width = calculate_aspect_ratio(self.source.data["image"][0].shape, width)
+        if height > 600:
+            _ratio = 600 / height
+            height = 600
+            width = int(width * _ratio)
+        self.figure.width = self.kwargs.get("width", width)
+        self.figure.height = self.kwargs.get("height", height)
 
     def check_data_source(self):
         """Ensure that each field in the data source is correct"""

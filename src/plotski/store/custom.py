@@ -4,14 +4,14 @@ import typing as ty
 import numpy as np
 from bokeh.models import ColumnDataSource
 
-from ..spectrum.custom import (
+from plotski.spectrum.custom import (
     PlotButterflyMassSpectrum,
     PlotButterflyMobilogram,
     PlotCentroidMassSpectrum,
     PlotMassSpectrum,
     PlotMobilogram,
 )
-from . import PlotStore
+from plotski.store import PlotStore
 
 
 class CustomPlotStore(PlotStore):

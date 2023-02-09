@@ -3,7 +3,11 @@ import os
 
 import numpy as np
 import pytest
-from bokeh.models.widgets import Tabs
+
+try:
+    from bokeh.models import Tabs
+except ImportError:
+    from bokeh.models.widgets import Tabs
 
 from plotski.rgb import ImageRGBA
 from plotski.store import PlotStore, containers

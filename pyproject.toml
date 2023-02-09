@@ -9,6 +9,26 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 write_to = "src/plotski/_version.py"
 
+[tool.check-manifest]
+ignore = [
+  "bundle.py",
+  ".cirrus.yml",
+  ".pre-commit-config.yaml",
+  "asv.conf.json",
+  "codecov.yml",
+  "Makefile",
+  "mypy.ini",
+  "tools/minreq.py",
+  "tox.ini",
+  ".deepsource.toml",
+  "*.pyi",  # added by make typestubs
+  "src/plotski/_version.py",  # added during build by setuptools_scm
+  "scripts/*.bat",  # scripts
+  "renovate.json",
+  ".pyup.yml",
+  ".readthedocs.yml",
+]
+
 [tool.black]
 line-length = 120
 target-version = ['py36', 'py37', 'py38']
@@ -29,21 +49,59 @@ exclude = '''
 )
 '''
 
-[tool.check-manifest]
-ignore = [
-  ".pre-commit-config.yaml",
-  "asv.conf.json",
-  "codecov.yml",
-  "Makefile",
-  "mypy.ini",
-  "src/plotski/_version.py",  # added during build by setuptools_scm
-  "tox.ini",
-  "*.pyi",  # added by make typestubs
-]
-
 [tool.isort]
 profile = "black"
 line_length = 120
+
+[tool.ruff]
+line-length = 120
+ignore = ["E501", "UP006", "UP007", "TCH001", "TCH002", "TCH003"]
+target-version = "py38"
+fix = true
+exclude = [
+  ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".mypy_cache",
+    ".pants.d",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    "*vendored*",
+    "*_vendor*",
+]
+
+#[tool.ruff.per-file-ignores]
+
+#[tool.ruff.isort]
+#known-first-party = ["plotski"]
+
+[tool.mypy]
+files = "src/plotski"
+ignore_missing_imports = true
+exclude = [
+    "_tests",
+    "tests",
+]
+show_error_codes = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+check_untyped_defs = true
+# # maybe someday :)
+# disallow_any_generics = true
+# no_implicit_reexport = true
+# disallow_untyped_defs = true
+
 
 [tool.pytest.ini_options]
 # These follow standard library warnings filters syntax.  See more here:
@@ -55,6 +113,9 @@ addopts = "--maxfail=5 --durations=5"
 # instead... assert the warning with `pytest.warns()` in the relevant test,
 # That way we can clean them up when no longer necessary
 filterwarnings = [
-  "error:::plotski", # turn warnings from plotski into errors
-  "ignore:numpy.ufunc size changed:RuntimeWarning",
+    "error:::plotski", # turn warnings from plotski into errors
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+    "ignore::RuntimeWarning",
+    "ignore:numpy.ufunc size changed:RuntimeWarning",
 ]

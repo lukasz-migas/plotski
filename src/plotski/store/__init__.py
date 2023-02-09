@@ -8,14 +8,23 @@ import numpy as np
 from bokeh.io import save
 from bokeh.layouts import column, gridplot, row
 from bokeh.models import ColumnDataSource
-from bokeh.models.widgets import Panel, Tabs
 
-from ..base import Plot
-from ..image import PlotImage, PlotImageRGBA
-from ..scatter import PlotScatter
-from ..spectrum.plot import PlotCentroid, PlotMultiLine, PlotSpectrum
-from ..utilities import get_unique_str
-from .containers import Column, Container, Grid, Individual, Row
+try:
+    from bokeh.models import TabPanel
+except ImportError:
+    from bokeh.models.widgets import Panel as TabPanel
+
+try:
+    from bokeh.models import Tabs
+except ImportError:
+    from bokeh.models.widgets import Tabs
+
+from plotski.base import Plot
+from plotski.image import PlotImage, PlotImageRGBA
+from plotski.scatter import PlotScatter
+from plotski.spectrum.plot import PlotCentroid, PlotMultiLine, PlotSpectrum
+from plotski.store.containers import Column, Container, Grid, Individual, Row
+from plotski.utilities import get_unique_str
 
 # TODO: add repr that shows the layout of the store e.g. tab 1 \ plot 1 plot 2 plot 3; tab 2 \ plot 1 plot 2 plot 3
 # TODO: add option to annotate spectrum and heatmap with rois and/or peaks
@@ -144,7 +153,7 @@ class PlotStore:
             if not _tab_contents:
                 print("Tab was empty - not adding it into the HTML document")
                 continue
-            panels.append(Panel(child=column(children=_tab_contents), title=tab_name))
+            panels.append(TabPanel(child=column(children=_tab_contents), title=tab_name))
 
         # if the 'always_as_tabs' toggle is disabled and only one tab is present, the returned object will be column
         # element
