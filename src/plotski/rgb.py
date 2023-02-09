@@ -40,46 +40,6 @@ class ImageRGBA:
         list of flat images
     colors : Optional[List]
         list of colors - if None have been specified, a set of defaults will be used instead
-
-    Examples
-    --------
-    Generate composite image based on 3 ion images. Here using random integers to illustrate the usage
-
-    >>> np.random.seed(42)
-    >>> images = [np.random.randint(0, 255, (3, 3)) for _ in range(3)]
-    >>> image_rgba = ImageRGBA(images, colors=["#800000", "#9A6324", "#469990"])
-    >>> rgba = image_rgba.rgba
-    >>> rgba
-    array([[[160, 130, 104, 255],
-            [255, 179, 113, 255],
-            [255, 195, 126, 255]],
-    <BLANKLINE>
-           [[ 15,  33,  31, 255],
-            [208,  90,  32, 255],
-            [ 81,  64,  55, 255]],
-    <BLANKLINE>
-           [[244, 182, 154, 255],
-            [ 77, 119, 102, 255],
-            [106,  43,  29, 255]]], dtype=uint8)
-
-    You can also generate RGB image based on single ion image without the alpha channel
-
-    >>> np.random.seed(42)
-    >>> images = [np.random.randint(0, 255, (3, 3))]
-    >>> image_rgba = ImageRGBA(images, colors=["#800000"])
-    >>> rgb = image_rgba.rgb
-    >>> rgb
-    array([[[ 64,   0,   0],
-            [120,   0,   0],
-            [ 57,   0,   0]],
-    <BLANKLINE>
-           [[  0,   0,   0],
-            [ 67,   0,   0],
-            [ 41,   0,   0]],
-    <BLANKLINE>
-           [[128,   0,   0],
-            [  4,   0,   0],
-            [ 64,   0,   0]]], dtype=uint8)
     """
 
     def __init__(self, images: ty.List[np.ndarray], colors: ty.Optional[ty.List] = None):

@@ -14,7 +14,7 @@ def get_colormap(cmap: str):
         import matplotlib as mpl
 
         return mpl.colormaps[cmap]
-    except ImportError:
+    except AttributeError:
         from matplotlib import cm
 
         return cm.get_cmap(cmap)
