@@ -9,6 +9,77 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools_scm]
 write_to = "src/plotski/_version.py"
 
+
+# https://peps.python.org/pep-0621/
+[project]
+name = "plotski"
+description = "Convenient interactive plotting in Python."
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "BSD 3-Clause License" }
+authors = [
+    { email = "lukas.migas@yahoo.com", name = "Lukasz G. Migas" },
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Education",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Typing :: Typed",
+    "Topic :: Scientific/Engineering :: Visualization",
+    "Topic :: Utilities",
+    "Operating System :: POSIX",
+    "Operating System :: Unix",
+    "Operating System :: MacOS",
+]
+dynamic = ["version"]
+dependencies = [
+    "bokeh>=3.0.0",
+    "numpy<=1.24,>=1.21; python_version < '3.10'",
+    "numpy<=1.24,>=1.22; python_version >= '3.10'",
+    "scikit-image>=0.19.0",
+    "matplotlib>=3.3.0",
+]
+
+# extras
+# https://peps.python.org/pep-0621/#dependencies-optional-dependencies
+[project.optional-dependencies]
+test = [
+    "pytest>=6.0",
+    "pytest-cov",
+]
+dev = [
+    "black==22.1.0",
+    "ipython",
+    "mypy",
+    "pdbpp",
+    "pre-commit",
+    "pytest",
+    "rich",
+    "ruff",
+    "koyo[test]"
+]
+
+[project.urls]
+homepage = "https://github.com/lukasz-migas/plotski"
+repository = "https://github.com/lukasz-migas/plotski"
+
+# same as console_scripts entry point
+# [project.scripts]
+# spam-cli = "spam:main_cli"
+
+# Entry points
+# https://peps.python.org/pep-0621/#entry-points
+# [project.entry-points."spam.magical"]
+# tomatoes = "spam:main_tomatoes"
+
 [tool.check-manifest]
 ignore = [
   "bundle.py",
@@ -31,7 +102,7 @@ ignore = [
 
 [tool.black]
 line-length = 120
-target-version = ['py36', 'py37', 'py38']
+target-version = ['py37', 'py38', 'py39']
 include = '\.pyi?$'
 exclude = '''
 (
@@ -57,7 +128,20 @@ line_length = 120
 line-length = 120
 ignore = ["E501", "UP006", "UP007", "TCH001", "TCH002", "TCH003"]
 target-version = "py38"
-fix = true
+# https://beta.ruff.rs/docs/rules/
+extend-select = [
+    "E",    # style errors
+    "W",    # style warnings
+    "F",    # flakes
+    "D",    # pydocstyle
+    "I",    # isort
+    "U",    # pyupgrade
+    # "S",    # bandit
+    "C",    # flake8-comprehensions
+    "B",    # flake8-bugbear
+    "A001", # flake8-builtins
+    "RUF",  # ruff-specific rules
+]
 exclude = [
   ".bzr",
     ".direnv",
@@ -79,11 +163,52 @@ exclude = [
     "*vendored*",
     "*_vendor*",
 ]
-
-#[tool.ruff.per-file-ignores]
+# I do this to get numpy-style docstrings AND retain
+# D417 (Missing argument descriptions in the docstring)
+# otherwise, see:
+# https://beta.ruff.rs/docs/faq/#does-ruff-support-numpy-or-google-style-docstrings
+# https://github.com/charliermarsh/ruff/issues/2606
+extend-ignore = [
+    "D100", # Missing docstring in public module
+    "D102", # Mising docstring in magic method
+    "D105", # Mising docstring in magic method
+    "D107", # Missing docstring in __init__
+    "D203", # 1 blank line required before class docstring
+    "D212", # Multi-line docstring summary should start at the first line
+    "D213", # Multi-line docstring summary should start at the second line
+    "D401", # First line should be in imperative mood
+    "D413", # Missing blank line after last section
+    "D416", # Section name should end with a colon
+]
+[tool.ruff.per-file-ignores]
+"tests/*.py" = ["D", "S"]
 
 #[tool.ruff.isort]
 #known-first-party = ["plotski"]
+
+# https://docs.pytest.org/en/6.2.x/customize.html
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["tests"]
+filterwarnings = ["error"]
+
+[tool.pytest.ini_options]
+# These follow standard library warnings filters syntax.  See more here:
+# https://docs.python.org/3/library/warnings.html#describing-warning-filters
+addopts = "--maxfail=5 --durations=5"
+
+# NOTE: only put things that will never change in here.
+# plotski deprecation and future warnings should NOT go in here.
+# instead... assert the warning with `pytest.warns()` in the relevant test,
+# That way we can clean them up when no longer necessary
+filterwarnings = [
+    "error:::plotski", # turn warnings from plotski into errors
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+    "ignore::RuntimeWarning",
+    "ignore:numpy.ufunc size changed:RuntimeWarning",
+]
+
 
 [tool.mypy]
 files = "src/plotski"
@@ -102,20 +227,51 @@ check_untyped_defs = true
 # no_implicit_reexport = true
 # disallow_untyped_defs = true
 
+# # module specific overrides
+# [[tool.mypy.overrides]]
+# module = ["numpy.*",]
+# ignore_errors = true
 
-[tool.pytest.ini_options]
-# These follow standard library warnings filters syntax.  See more here:
-# https://docs.python.org/3/library/warnings.html#describing-warning-filters
-addopts = "--maxfail=5 --durations=5"
 
-# NOTE: only put things that will never change in here.
-# plotski deprecation and future warnings should NOT go in here.
-# instead... assert the warning with `pytest.warns()` in the relevant test,
-# That way we can clean them up when no longer necessary
-filterwarnings = [
-    "error:::plotski", # turn warnings from plotski into errors
-    "ignore::UserWarning",
-    "ignore::DeprecationWarning",
-    "ignore::RuntimeWarning",
-    "ignore:numpy.ufunc size changed:RuntimeWarning",
+# https://coverage.readthedocs.io/en/6.4/config.html
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "@overload",
+    "except ImportError",
+    "\\.\\.\\.",
+    "raise NotImplementedError()",
+    "def test",
+    "if settings.DEBUG",
+    "def __repr__"
 ]
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "tests/*",
+   "*/__init__.py",
+   "raise NotImplementedError",
+   "def __repr__",
+   "if __name__ == .__main__.:",
+   "def test",
+]
+
+# https://github.com/mgedmin/check-manifest#configuration
+[tool.check-manifest]
+ignore = [
+    ".github_changelog_generator",
+    ".pre-commit-config.yaml",
+    ".ruff_cache/**/*",
+    "setup.py",
+    "tests/**/*",
+    "**/*_version.py"
+]
+
+# https://python-semantic-release.readthedocs.io/en/latest/configuration.html
+[tool.semantic_release]
+version_source = "tag_only"
+branch = "main"
+changelog_sections = "feature,fix,breaking,documentation,performance,chore,:boom:,:sparkles:,:children_crossing:,:lipstick:,:iphone:,:egg:,:chart_with_upwards_trend:,:ambulance:,:lock:,:bug:,:zap:,:goal_net:,:alien:,:wheelchair:,:speech_balloon:,:mag:,:apple:,:penguin:,:checkered_flag:,:robot:,:green_apple:,Other"
+# commit_parser=semantic_release.history.angular_parser
+build_command = "pip install build && python -m build"
