@@ -35,6 +35,7 @@ classifiers = [
     "Typing :: Typed",
     "Topic :: Scientific/Engineering :: Visualization",
     "Topic :: Utilities",
+    "Operating System :: Microsoft :: Windows",
     "Operating System :: POSIX",
     "Operating System :: Unix",
     "Operating System :: MacOS",
@@ -64,7 +65,7 @@ dev = [
     "pytest",
     "rich",
     "ruff",
-    "koyo[test]"
+    "plotski[test]"
 ]
 
 [project.urls]
@@ -79,7 +80,6 @@ repository = "https://github.com/lukasz-migas/plotski"
 # https://peps.python.org/pep-0621/#entry-points
 # [project.entry-points."spam.magical"]
 # tomatoes = "spam:main_tomatoes"
-
 
 [tool.black]
 line-length = 120
@@ -124,7 +124,7 @@ extend-select = [
     "RUF",  # ruff-specific rules
 ]
 exclude = [
-  ".bzr",
+    ".bzr",
     ".direnv",
     ".eggs",
     ".git",
@@ -187,7 +187,7 @@ addopts = "--maxfail=5 --durations=5"
 
 
 [tool.mypy]
-files = "src/plotski"
+files = "src/**/"
 ignore_missing_imports = true
 exclude = [
     "_tests",
@@ -207,7 +207,6 @@ check_untyped_defs = true
 # [[tool.mypy.overrides]]
 # module = ["numpy.*",]
 # ignore_errors = true
-
 
 # https://coverage.readthedocs.io/en/6.4/config.html
 [tool.coverage.report]
