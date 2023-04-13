@@ -1,28 +1,34 @@
 repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.4.0
-    hooks:
-    - id: no-commit-to-branch
-      args: ['--branch', 'master', "--branch", "main"]
+#-   repo: https://github.com/pre-commit/pre-commit-hooks
+#    rev: v4.4.0
+#    hooks:
+#    - id: no-commit-to-branch
+#      args: ['--branch', 'master', "--branch", "main"]
+
 -   repo: https://github.com/MarcoGorelli/absolufy-imports
     rev: v0.3.1
     hooks:
     -   id: absolufy-imports
         exclude: tests
+
 -   repo: https://github.com/hadialqattan/pycln
     rev: v2.1.3
     hooks:
     - id: pycln
+
 -   repo: https://github.com/pycqa/isort
     rev: 5.12.0
     hooks:
     - id: isort
+
 -   repo: https://github.com/psf/black
     rev: 23.1.0
     hooks:
     - id: black
       pass_filenames: true
+
 -   repo: https://github.com/charliermarsh/ruff-pre-commit
     rev: v0.0.255
     hooks:
       - id: ruff
+        args: ["--fix"]
