@@ -190,11 +190,6 @@ extend-ignore = [
 [tool.pytest.ini_options]
 minversion = "6.0"
 testpaths = ["tests"]
-filterwarnings = ["error"]
-# These follow standard library warnings filters syntax.  See more here:
-# https://docs.python.org/3/library/warnings.html#describing-warning-filters
-addopts = "--maxfail=5 --durations=5"
-
 # NOTE: only put things that will never change in here.
 # plotski deprecation and future warnings should NOT go in here.
 # instead... assert the warning with `pytest.warns()` in the relevant test,
@@ -204,8 +199,10 @@ filterwarnings = [
     "ignore::UserWarning",
     "ignore::DeprecationWarning",
     "ignore::RuntimeWarning",
-    "ignore:numpy.ufunc size changed:RuntimeWarning",
-]
+    "ignore:numpy.ufunc size changed:RuntimeWarning",]
+# These follow standard library warnings filters syntax.  See more here:
+# https://docs.python.org/3/library/warnings.html#describing-warning-filters
+addopts = "--maxfail=5 --durations=5"
 
 
 [tool.mypy]
