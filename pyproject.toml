@@ -80,25 +80,6 @@ repository = "https://github.com/lukasz-migas/plotski"
 # [project.entry-points."spam.magical"]
 # tomatoes = "spam:main_tomatoes"
 
-[tool.check-manifest]
-ignore = [
-  "bundle.py",
-  ".cirrus.yml",
-  ".pre-commit-config.yaml",
-  "asv.conf.json",
-  "codecov.yml",
-  "Makefile",
-  "mypy.ini",
-  "tools/minreq.py",
-  "tox.ini",
-  ".deepsource.toml",
-  "*.pyi",  # added by make typestubs
-  "src/plotski/_version.py",  # added during build by setuptools_scm
-  "scripts/*.bat",  # scripts
-  "renovate.json",
-  ".pyup.yml",
-  ".readthedocs.yml",
-]
 
 [tool.black]
 line-length = 120
@@ -260,7 +241,17 @@ ignore = [
     ".ruff_cache/**/*",
     "setup.py",
     "tests/**/*",
-    "**/*_version.py"
+    "**/*_version.py",
+    "scripts/*.bat",  # scripts
+    "renovate.json",
+    ".pyup.yml",
+    ".readthedocs.yml",
+    "*.pyi",  # added by make typestubs
+    "tox.ini",
+    ".deepsource.toml",
+    "Makefile",
+    "tools/minreq.py",
+    "mypy.ini"
 ]
 
 # https://python-semantic-release.readthedocs.io/en/latest/configuration.html
