@@ -7,7 +7,7 @@ from plotski.utilities import check_key
 
 
 class PlotSpectrum(Plot):
-    """Basic Spectrum plot"""
+    """Basic Spectrum plot."""
 
     # Data attributes
     DATA_KEYS = ("x", "y")
@@ -42,7 +42,7 @@ class PlotSpectrum(Plot):
         )
 
     def plot(self):
-        """Add plot data"""
+        """Add plot data."""
         line = self.figure.line(
             x="x",
             y="y",
@@ -67,7 +67,7 @@ class PlotSpectrum(Plot):
         )
 
     def set_hover(self):
-        """Set hover information"""
+        """Set hover information."""
         self.figure.add_tools(
             HoverTool(
                 show_arrow=True,
@@ -78,7 +78,7 @@ class PlotSpectrum(Plot):
         )
 
     def initialize_options(self):
-        """Convenience function to handle various options set by the user"""
+        """Convenience function to handle various options set by the user."""
         if "line_width" not in self.kwargs:
             self.kwargs["line_width"] = 1.5
         if "line_color" not in self.kwargs:
@@ -88,7 +88,7 @@ class PlotSpectrum(Plot):
         super().initialize_options()
 
     def set_ranges(self, **kwargs):
-        """Set range based on data source"""
+        """Set range based on data source."""
         # update x/y ranges
         x_min, x_max, y_min, y_max = self.get_extents(**kwargs)
         if "x_range" not in self.kwargs:
@@ -97,23 +97,23 @@ class PlotSpectrum(Plot):
             self.figure.y_range.update(start=y_min, end=y_max)
 
     def add_plot_line(self, source: ColumnDataSource, **kwargs):
-        """Add plot"""
+        """Add plot."""
         line = self.figure.line(x="x", y="y", source=source, **kwargs)
         self.plots[line.id] = (source, "Line")
         self.add_extents(source.data["x"], source.data["y"])
 
     def add_segments(self, source: ColumnDataSource, **kwargs):
-        """Add segments"""
+        """Add segments."""
         segment = self.figure.segment(x0="x0", y0="y0", x1="x1", y1="y1", source=source, **kwargs)
         self.annotations[segment.id] = (source, "Segment")
 
     def add_centroids_x(self, source: ColumnDataSource, **kwargs):
-        """Add vertical centroids"""
+        """Add vertical centroids."""
         segment = self.figure.segment(x0="x", y0="y0", x1="x", y1="y1", source=source, **kwargs)
         self.annotations[segment.id] = (source, "Centroid-X")
 
     def add_centroids_y(self, source: ColumnDataSource, **kwargs):
-        """Add horizontal centroids"""
+        """Add horizontal centroids."""
         segment = self.figure.segment(x0="x0", y0="y", x1="x1", y1="y", source=source, **kwargs)
         self.annotations[segment.id] = (source, "Centroid-Y")
 
@@ -124,7 +124,7 @@ class PlotSpectrum(Plot):
 
 
 class PlotCentroid(PlotSpectrum):
-    """Basic centroid plot"""
+    """Basic centroid plot."""
 
     DATA_KEYS = ("x", "y0", "y1")
 
@@ -150,7 +150,7 @@ class PlotCentroid(PlotSpectrum):
         )
 
     def plot(self):
-        """Add plot data"""
+        """Add plot data."""
         label = self.kwargs.get("label", "")
         centroid = self.figure.segment(
             x0="x",
@@ -168,7 +168,7 @@ class PlotCentroid(PlotSpectrum):
         self.plots[centroid.id] = centroid
 
     def set_hover(self):
-        """Set hover"""
+        """Set hover."""
         self.figure.add_tools(
             HoverTool(
                 show_arrow=True,
@@ -179,7 +179,7 @@ class PlotCentroid(PlotSpectrum):
         )
 
     def set_ranges(self, **kwargs):
-        """Set ranges"""
+        """Set ranges."""
         # update x/y ranges
         src = self.source.data
         if "x_range" not in self.kwargs:
@@ -189,7 +189,7 @@ class PlotCentroid(PlotSpectrum):
 
 
 class PlotButterflySpectrum(PlotSpectrum):
-    """Butterfly plot"""
+    """Butterfly plot."""
 
     DATA_KEYS = ("x_top", "y_top", "x_bottom", "y_bottom")
 
@@ -215,7 +215,7 @@ class PlotButterflySpectrum(PlotSpectrum):
         )
 
     def plot(self):
-        """Plot data"""
+        """Plot data."""
         line_top = self.figure.line(
             x="x_top",
             y="y_top",
@@ -238,7 +238,7 @@ class PlotButterflySpectrum(PlotSpectrum):
         self.plots[line_bottom.id] = line_bottom
 
     def add_legend(self):
-        """Add legend item to the plot"""
+        """Add legend item to the plot."""
         legend = Legend(
             items=[
                 ("Top", self.figure.select(name=self.plot_type + "-top")),
@@ -251,7 +251,7 @@ class PlotButterflySpectrum(PlotSpectrum):
         self.figure.legend.click_policy = "hide"
 
     def set_ranges(self, **kwargs):
-        """Set ranges"""
+        """Set ranges."""
         # update x/y ranges
         src = self.source.data
         x = [min(src["x_top"]), min(src["x_bottom"]), max(src["x_top"]), max(src["x_bottom"])]
@@ -260,7 +260,7 @@ class PlotButterflySpectrum(PlotSpectrum):
         self.figure.y_range = Range1d(min(y) * 1.05, max(y) * 1.05)
 
     def set_hover(self):
-        """Set hover"""
+        """Set hover."""
         self.figure.add_tools(
             HoverTool(
                 show_arrow=True,
@@ -286,7 +286,7 @@ class PlotButterflySpectrum(PlotSpectrum):
 
 
 class PlotMultiLine(PlotSpectrum):
-    """Basic multiline spectrum"""
+    """Basic multiline spectrum."""
 
     DATA_KEYS = ("xs", "ys")
 
@@ -312,7 +312,7 @@ class PlotMultiLine(PlotSpectrum):
         )
 
     def plot(self):
-        """Plot data"""
+        """Plot data."""
         multiline = self.figure.multi_line(
             xs="xs",
             ys="ys",
@@ -325,7 +325,7 @@ class PlotMultiLine(PlotSpectrum):
         self.plots[multiline.id] = multiline
 
     def set_ranges(self, **kwargs):
-        """Set plot ranges"""
+        """Set plot ranges."""
         src = self.source.data
         xmin = min([min(x) for x in src["xs"]])
         xmax = max([max(x) for x in src["xs"]])
@@ -339,7 +339,7 @@ class PlotMultiLine(PlotSpectrum):
         # self.figure.y_range = Range1d(min(y) * 1.05, max(y) * 1.05)
 
     def set_hover(self):
-        """Set hover"""
+        """Set hover."""
         tooltips = [
             (f"{self.x_axis_label}", "x"),
             (f"{self.y_axis_label}", "y"),

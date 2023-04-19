@@ -1,5 +1,5 @@
 """
-Script to replace minimum requirements with exact requirements in setup.cfg
+Script to replace minimum requirements with exact requirements in setup.cfg.
 
 This ensures that our test matrix includes a version with only the minimum
 required versions of packages, and we don't accidentally use features only

@@ -1,13 +1,14 @@
-"""Module containing functions that generate RGB plots"""
+"""Module containing functions that generate RGB plots."""
 import typing as ty
 from itertools import cycle
 
 import numpy as np
+from koyo.utilities import rescale
 from matplotlib.colors import ListedColormap
 from skimage import exposure
 from skimage.color import gray2rgb, gray2rgba
 
-from plotski.utilities import convert_hex_to_rgb_1, rescale
+from plotski.utilities import convert_hex_to_rgb_1
 
 np.seterr(divide="ignore", invalid="ignore")
 
@@ -31,8 +32,10 @@ COLORS = cycle(
 
 
 class ImageRGBA:
-    """This class simplifies generation of composite images by remapping individual ion images to their respective
-    colors, which can be quite useful when visualising multiple species at the same time.
+    """Class that simplifies generation of composite images.
+
+    This happens by remapping individual ion images to their respective colors, which can be quite useful when
+    visualising multiple species at the same time.
 
     Parameters
     ----------
@@ -43,7 +46,7 @@ class ImageRGBA:
     """
 
     def __init__(self, images: ty.List[np.ndarray], colors: ty.Optional[ty.List] = None):
-        """Class to quickly generate composite RGBA images based on ion (or other) images"""
+        """Class to quickly generate composite RGBA images based on ion (or other) images."""
         self.validate(images, colors)
 
         self._original, self._images, self._colors = self.setup(images, colors)
@@ -54,7 +57,7 @@ class ImageRGBA:
 
     @staticmethod
     def _convert_color(color):
-        """Convert hex/rgb color"""
+        """Convert hex/rgb color."""
         if isinstance(color, str):
             return convert_hex_to_rgb_1(color)
         if isinstance(color, (tuple, list, np.ndarray)):
@@ -64,17 +67,17 @@ class ImageRGBA:
 
     @property
     def intensities(self) -> np.ndarray:
-        """Return summed intensities from the original data"""
+        """Return summed intensities from the original data."""
         return np.sum(self._original, axis=0)
 
     @property
     def rgb(self) -> np.ndarray:
-        """Return combined image array without the alpha channel"""
+        """Return combined image array without the alpha channel."""
         return self.rgba[:, :, 0:3].astype(np.uint8)
 
     @property
     def rgba(self) -> np.ndarray:
-        """Return combined image array with the alpha channel"""
+        """Return combined image array with the alpha channel."""
         if self._rgba is None:
             self._rgba = self.combine().astype(np.uint8)
             self._rgba[:, :, 3] = 255
@@ -88,7 +91,7 @@ class ImageRGBA:
 
     @staticmethod
     def validate(images: ty.List[np.ndarray], colors: ty.Optional[ty.List[str]]) -> None:
-        """Validate image input
+        """Validate image input.
 
         Parameters
         ----------
@@ -132,13 +135,13 @@ class ImageRGBA:
                     raise ValueError("Color must be a string (hex) or list (RGBA in range 0-1)")
 
     def reset(self):
-        """Reset the store RGBA array to ignore previously made changes (e.g. channel normalizations)"""
+        """Reset the store RGBA array to ignore previously made changes (e.g. channel normalizations)."""
         self.rgba = None
 
     def setup(
         self, images: ty.List[np.ndarray], colors: ty.Optional[ty.List[str]]
     ) -> ty.Tuple[ty.List, ty.List, ty.List]:
-        """Clean-up and remap images to appropriate color
+        """Clean-up and remap images to appropriate color.
 
         Parameters
         ----------
@@ -178,7 +181,7 @@ class ImageRGBA:
         add_alpha: bool = True,
         max_value: ty.Union[int, float] = 255,
     ) -> np.ndarray:
-        """Convert flat array to multi-channel RGB image based on the specified color
+        """Convert flat array to multi-channel RGB image based on the specified color.
 
         Parameters
         ----------
@@ -212,7 +215,7 @@ class ImageRGBA:
         return image * color
 
     def recolor(self, image_id: int, color: ty.Union[str, ty.List]):
-        """Change color of particular image
+        """Change color of particular image.
 
         Parameters
         ----------
@@ -229,7 +232,7 @@ class ImageRGBA:
         self.reset()
 
     def get_one(self, image_id: int, keep_alpha: bool = False, dtype=np.uint8, fill_alpha: ty.Optional[int] = None):
-        """Retrieve single 3/4D image
+        """Retrieve single 3/4D image.
 
         Parameters
         ----------
@@ -258,7 +261,7 @@ class ImageRGBA:
         return self._images[image_id][:, :, :3].astype(dtype)
 
     def get_rgba(self, fill_alpha: ty.Optional[int] = None):
-        """Retrieve RGBA image"""
+        """Retrieve RGBA image."""
         image = self.rgba
         if fill_alpha is not None and isinstance(fill_alpha, int):
             image[:, :, 3] = fill_alpha
@@ -266,7 +269,7 @@ class ImageRGBA:
         return image
 
     def combine(self, max_value: ty.Union[int, float] = 255, dtype=np.uint8) -> np.ndarray:
-        """Combine multiple images into one
+        """Combine multiple images into one.
 
         Parameters
         ----------
@@ -284,7 +287,7 @@ class ImageRGBA:
 
     @staticmethod
     def _combine(images: ty.List[np.ndarray], max_value: ty.Union[int, float], dtype) -> np.ndarray:
-        """Combine multiple images into one
+        """Combine multiple images into one.
 
         Parameters
         ----------
@@ -310,7 +313,7 @@ class ImageRGBA:
         min_int: ty.Optional[ty.Union[int, float]] = None,
         max_int: ty.Optional[ty.Union[int, float]] = None,
     ):
-        """Normalize image channel to increase/decrease intensity
+        """Normalize image channel to increase/decrease intensity.
 
         Parameters
         ----------
@@ -362,7 +365,7 @@ class ImageRGBA:
         min_value: ty.Union[int, float] = 0,
         max_value: ty.Union[int, float] = 255,
     ):
-        """Normalize image channel to increase/decrease intensity
+        """Normalize image channel to increase/decrease intensity.
 
         Parameters
         ----------
@@ -392,7 +395,7 @@ class ImageRGBA:
 
     # noinspection PyTypeChecker
     def quantile_rescale(self, q_low: float = 0.02, q_high: float = 0.98, image: ty.Optional[np.ndarray] = None):
-        """Contrast enhancement using stretching or shrinking of intensity levels
+        """Contrast enhancement using stretching or shrinking of intensity levels.
 
         Returns
         -------
@@ -419,7 +422,7 @@ class ImageRGBA:
 
     # noinspection PyTypeChecker
     def equalize_histogram(self, n_bins: int = 256, image: ty.Optional[np.ndarray] = None, as_int: bool = False):
-        """Contrast enhancement using histogram equalization
+        """Contrast enhancement using histogram equalization.
 
         Parameters
         ----------
@@ -445,7 +448,7 @@ class ImageRGBA:
     def adaptive_histogram(
         self, clip_limit: float = 0.01, n_bins: int = 256, image: ty.Optional[np.ndarray] = None, as_int: bool = False
     ):
-        """Contrast Limited Adaptive Histogram Equalization
+        """Contrast Limited Adaptive Histogram Equalization.
 
         Locally enhance contrast of a RGBA image. The algorithm computes histograms over different tile regions of
         the image.
@@ -474,7 +477,7 @@ class ImageRGBA:
         return array
 
     def contrast_stretching(self, in_range="image", image: ty.Optional[np.ndarray] = None, as_int: bool = False):
-        """Contrast Limited Adaptive Histogram Equalization
+        """Contrast Limited Adaptive Histogram Equalization.
 
         Locally enhance contrast of a RGBA image. The algorithm computes histograms over different tile regions of
         the image.
@@ -505,7 +508,7 @@ class ImageRGBA:
         return array
 
     def get_colormap(self, image_id: int, n_bins: int = 256, name: str = "colormap"):
-        """Create linear colormap
+        """Create linear colormap.
 
         Parameters
         ----------

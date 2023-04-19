@@ -5,7 +5,7 @@ from plotski.spectrum.plot import PlotButterflySpectrum, PlotCentroid, PlotSpect
 
 
 class PlotCentroidMassSpectrum(PlotCentroid):
-    """Plot centroid mass spectrum"""
+    """Plot centroid mass spectrum."""
 
     def __init__(
         self,
@@ -29,7 +29,7 @@ class PlotCentroidMassSpectrum(PlotCentroid):
 
 
 class PlotMassSpectrum(PlotSpectrum):
-    """Mass spectrum plot"""
+    """Mass spectrum plot."""
 
     def __init__(
         self,
@@ -53,7 +53,7 @@ class PlotMassSpectrum(PlotSpectrum):
 
 
 class PlotMobilogram(PlotSpectrum):
-    """Mobilogram plot"""
+    """Mobilogram plot."""
 
     def __init__(
         self,
@@ -77,7 +77,7 @@ class PlotMobilogram(PlotSpectrum):
 
 
 class PlotButterflyMassSpectrum(PlotButterflySpectrum):
-    """Make butterfly mass spectrum"""
+    """Make butterfly mass spectrum."""
 
     def __init__(
         self,
@@ -101,7 +101,7 @@ class PlotButterflyMassSpectrum(PlotButterflySpectrum):
 
 
 class PlotButterflyMobilogram(PlotButterflySpectrum):
-    """Make butterfly mobilogram"""
+    """Make butterfly mobilogram."""
 
     def __init__(
         self,

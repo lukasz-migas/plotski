@@ -20,10 +20,10 @@ class Container(ty.MutableSequence):
 
     @ty.overload
     @abstractmethod
-    def __getitem__(self, s: slice) -> ty.MutableSequence[T]:  # noqa: F811
+    def __getitem__(self, s: slice) -> ty.MutableSequence[T]:
         ...
 
-    def __getitem__(self, i: int) -> T:  # noqa: F811
+    def __getitem__(self, i: int) -> T:
         return self._data[i]
 
     @ty.overload
@@ -33,10 +33,10 @@ class Container(ty.MutableSequence):
 
     @ty.overload
     @abstractmethod
-    def __setitem__(self, s: slice, o: ty.Iterable[T]) -> None:  # noqa: F811
+    def __setitem__(self, s: slice, o: ty.Iterable[T]) -> None:
         ...
 
-    def __setitem__(self, i: int, o: T) -> None:  # noqa: F811
+    def __setitem__(self, i: int, o: T) -> None:
         self._data[i] = o
 
     @ty.overload
@@ -46,10 +46,10 @@ class Container(ty.MutableSequence):
 
     @ty.overload
     @abstractmethod
-    def __delitem__(self, i: slice) -> None:  # noqa: F811
+    def __delitem__(self, i: slice) -> None:
         ...
 
-    def __delitem__(self, i: int) -> None:  # noqa: F811
+    def __delitem__(self, i: int) -> None:
         del self._data[i]
 
     def __len__(self) -> int:

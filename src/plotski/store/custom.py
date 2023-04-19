@@ -18,7 +18,7 @@ class CustomPlotStore(PlotStore):
     """Plot store with extra functionality."""
 
     def plot_mass_spectrum(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
-        """Adds mass spectrum to the plot store
+        """Adds mass spectrum to the plot store.
 
         Parameters
         ----------
@@ -59,7 +59,7 @@ class CustomPlotStore(PlotStore):
         return tab_name, layout_name, plot
 
     def plot_butterfly_mass_spectrum(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
-        """Adds butterfly mass spectra to the plot store (one on top / one below)
+        """Adds butterfly mass spectra to the plot store (one on top / one below).
 
         Parameters
         ----------
@@ -98,7 +98,7 @@ class CustomPlotStore(PlotStore):
         return tab_name, layout_name, plot
 
     def plot_centroid_mass_spectrum(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
-        """Adds centroid mass spectrum to the plot store
+        """Adds centroid mass spectrum to the plot store.
 
         Parameters
         ----------
@@ -140,7 +140,7 @@ class CustomPlotStore(PlotStore):
         return tab_name, layout_name, plot
 
     def plot_mobilogram(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
-        """Adds mobilogram to the plot store
+        """Adds mobilogram to the plot store.
 
         Parameters
         ----------
@@ -180,7 +180,7 @@ class CustomPlotStore(PlotStore):
         return tab_name, layout_name, plot
 
     def plot_butterfly_mobilogram(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
-        """Adds butterfly mobilograms to the plot store (one on top / one below)
+        """Adds butterfly mobilograms to the plot store (one on top / one below).
 
         Parameters
         ----------

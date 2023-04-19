@@ -1,4 +1,4 @@
-"""Bokeh plot store"""
+"""Bokeh plot store."""
 import os
 import typing as ty
 import warnings
@@ -8,6 +8,7 @@ import numpy as np
 from bokeh.io import save
 from bokeh.layouts import column, gridplot, row
 from bokeh.models import ColumnDataSource
+from koyo.secret import get_unique_str
 
 try:
     from bokeh.models import TabPanel
@@ -24,7 +25,6 @@ from plotski.image import PlotImage, PlotImageRGBA
 from plotski.scatter import PlotScatter
 from plotski.spectrum.plot import PlotCentroid, PlotMultiLine, PlotSpectrum
 from plotski.store.containers import Column, Container, Grid, Individual, Row
-from plotski.utilities import get_unique_str
 
 # TODO: add repr that shows the layout of the store e.g. tab 1 \ plot 1 plot 2 plot 3; tab 2 \ plot 1 plot 2 plot 3
 # TODO: add option to annotate spectrum and heatmap with rois and/or peaks
@@ -45,11 +45,11 @@ class PlotStore:
         self.tabs: ty.Dict[str, ty.Dict[str, Container[Plot]]] = {}
 
     def __repr__(self) -> str:
-        """Print"""
+        """Print."""
         return f"PlotStore <tabs={len(self.tabs)}>"
 
     def __getitem__(self, tab: ty.Union[int, str]):
-        """Get tab object"""
+        """Get tab object."""
         if isinstance(tab, int):
             tab = self.tab_names[tab]
         if tab not in self.tabs:
@@ -57,16 +57,16 @@ class PlotStore:
         return self.tabs[tab]
 
     def __len__(self) -> int:
-        """Get number of tabs"""
+        """Get number of tabs."""
         return len(self.tabs)
 
     @property
     def tab_names(self) -> ty.List[str]:
-        """Get list of tab names"""
+        """Get list of tab names."""
         return list(self.tabs.keys())
 
     def check_tab(self, tab_name: str, auto_add: bool = True):
-        """Check whether tab exists in the container"""
+        """Check whether tab exists in the container."""
         if tab_name not in self.tabs:
             if auto_add:
                 self.add_tab(tab_name)
@@ -89,13 +89,13 @@ class PlotStore:
             )
 
     def show(self, tab_names=None, always_as_tabs: bool = True):
-        """Return HTML representation of the document"""
+        """Return HTML representation of the document."""
         from bokeh.io import show
 
         return show(self.get_layout(tab_names, always_as_tabs))
 
     def get_layout(self, tab_names: ty.Optional[ty.List[str]] = None, always_as_tabs: bool = True):
-        """Return fully ordered Bokeh document which can be visualised (using 'show' command) or exported as HTML
+        """Return fully ordered Bokeh document which can be visualised (using 'show' command) or exported as HTML.
 
         Parameters
         ----------
@@ -112,7 +112,7 @@ class PlotStore:
         """
 
         def unpack_figures():
-            """Unpack layout elements from item/row/column or grid"""
+            """Unpack layout elements from item/row/column or grid."""
             return [plot.layout for plot in item_contents]
 
         # user can specify which tabs they would like to export as HTML document. If 'tab_names' was not specified,
@@ -135,7 +135,7 @@ class PlotStore:
             tab_contents = self.tabs[tab_name]
             _tab_contents = []
             # iterate over each object specified in the tab
-            for item_name, item_contents in tab_contents.items():
+            for _item_name, item_contents in tab_contents.items():
                 # items can be specified as an 'item' (single element)
                 figures = unpack_figures()
                 if isinstance(item_contents, Individual):
@@ -163,7 +163,7 @@ class PlotStore:
         return Tabs(tabs=panels)
 
     def save(self, filepath=None, show=True, **kwargs) -> str:
-        """Save Bokeh document as HTML file
+        """Save Bokeh document as HTML file.
 
         Parameters
         ----------
@@ -174,7 +174,6 @@ class PlotStore:
         kwargs :
             parameters to be passed on to the 'get_layout' function
         """
-
         if filepath is None:
             filepath = os.path.join(self.output_dir, self.filename)
 
@@ -188,7 +187,7 @@ class PlotStore:
         return filepath
 
     def get_unique_name(self, tab_name: str, basename: str = "item"):
-        """Get unique name for an item in specific tab. Names are made unique by adding #NUMBER+1 itself
+        """Get unique name for an item in specific tab. Names are made unique by adding #NUMBER+1 itself.
 
         Parameters
         ----------
@@ -199,7 +198,8 @@ class PlotStore:
 
         Returns
         -------
-
+        unique_name : str
+            unique name for the item in the tab
         """
         i = 0
         while f"{basename} #{i}" in self.tabs[tab_name]:
@@ -207,7 +207,7 @@ class PlotStore:
         return f"{basename} #{i}"
 
     def add_tab(self, tab_name: str, override=False) -> str:
-        """Add new tab to the document
+        """Add new tab to the document.
 
         Parameters
         ----------
@@ -236,7 +236,7 @@ class PlotStore:
         return tab_name
 
     def add_tabs(self, tab_names: ty.List[str], override=False):
-        """Add multiple new tabs to the document
+        """Add multiple new tabs to the document.
 
         Parameters
         ----------
@@ -317,7 +317,7 @@ class PlotStore:
         return grid_name
 
     def append_item(self, tab_name: str, layout_name: str, plot: Plot):
-        """Append plot object to tab/item_name so it can be easily retrieved later on
+        """Append plot object to tab/item_name so it can be easily retrieved later on.
 
         Parameters
         ----------
@@ -338,7 +338,7 @@ class PlotStore:
         return plot
 
     def plot_scatter(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
-        """Adds generic scatter to the plot store
+        """Adds generic scatter to the plot store.
 
         Parameters
         ----------
@@ -377,7 +377,7 @@ class PlotStore:
         return tab_name, layout_name, plot
 
     def plot_spectrum(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
-        """Adds generic spectrum to the plot store
+        """Adds generic spectrum to the plot store.
 
         Parameters
         ----------
@@ -416,7 +416,7 @@ class PlotStore:
         return tab_name, layout_name, plot
 
     def plot_centroids_x(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
-        """Adds generic spectrum to the plot store
+        """Adds generic spectrum to the plot store.
 
         Parameters
         ----------
@@ -458,7 +458,7 @@ class PlotStore:
         return tab_name, layout_name, plot
 
     def plot_centroids_y(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
-        """Adds generic spectrum to the plot store
+        """Adds generic spectrum to the plot store.
 
         Parameters
         ----------
@@ -500,7 +500,7 @@ class PlotStore:
         return tab_name, layout_name, plot
 
     def plot_multiline_spectrum(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
-        """Adds multiple-lines to the same plot area
+        """Adds multiple-lines to the same plot area.
 
         Parameters
         ----------
@@ -539,7 +539,7 @@ class PlotStore:
         return tab_name, layout_name, plot
 
     def plot_image(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
-        """Adds image to the plot store
+        """Adds image to the plot store.
 
         Parameters
         ----------
@@ -581,7 +581,7 @@ class PlotStore:
         return tab_name, layout_name, plot
 
     def plot_rgb_image(self, tab_name, data: ty.Dict, layout_name=None, **kwargs):
-        """Adds RGBA image to the plot store
+        """Adds RGBA image to the plot store.
 
         Parameters
         ----------
@@ -624,7 +624,7 @@ class PlotStore:
         return tab_name, layout_name, plot
 
     def add_line_plot(self, plot, data: ty.Dict, **kwargs):
-        """Adds generic spectrum to the plot store
+        """Adds generic spectrum to the plot store.
 
         Parameters
         ----------
@@ -651,7 +651,7 @@ class PlotStore:
         plot.add_plot_line(source, **kwargs)
 
     def add_band(self, plot, data: ty.Dict, **kwargs):
-        """Add band to the plot area to highlight specific region, display standard deviation of display errors
+        """Add band to the plot area to highlight specific region, display standard deviation of display errors.
 
         Parameters
         ----------
@@ -683,7 +683,7 @@ class PlotStore:
         plot.add_band(source, **kwargs)
 
     def add_span(self, plot, data: ty.Dict, **kwargs):
-        """Add span line(s) to the plot area
+        """Add span line(s) to the plot area.
 
         You can specify multiple lines simultaneously by setting the `location` key to an iterable. In case multiple
         values are provided, they will have the same `dimension`
@@ -718,7 +718,7 @@ class PlotStore:
         plot.add_span(data, **kwargs)
 
     def add_box(self, plot, data: ty.Dict, **kwargs):
-        """Add box to the plot area to highlight region of interest
+        """Add box to the plot area to highlight region of interest.
 
         Parameters
         ----------
@@ -756,7 +756,7 @@ class PlotStore:
         plot.add_box(data, **kwargs)
 
     def add_patch(self, plot, data: ty.List[ty.List], **kwargs):
-        """Add patch/polygon to the plot area to highlight region of interest
+        """Add patch/polygon to the plot area to highlight region of interest.
 
         Parameters
         ----------
@@ -774,7 +774,7 @@ class PlotStore:
         plot.add_patch(data, **kwargs)
 
     def add_labels(self, plot, data: ty.Dict, **kwargs):
-        """Add label set to an plot/image
+        """Add label set to an plot/image.
 
         Parameters
         ----------
@@ -807,7 +807,7 @@ class PlotStore:
         plot.add_labels(source, **kwargs)
 
     def add_segments(self, plot: PlotSpectrum, data: ty.Dict, **kwargs):
-        """Add label set to an plot/image
+        """Add label set to an plot/image.
 
         Parameters
         ----------
@@ -840,7 +840,7 @@ class PlotStore:
         plot.add_segments(source, **kwargs)
 
     def add_centroids_x(self, plot: PlotSpectrum, data: ty.Dict, **kwargs):
-        """Add vertical centroids/lines to a particular plot
+        """Add vertical centroids/lines to a particular plot.
 
         Parameters
         ----------
@@ -875,7 +875,7 @@ class PlotStore:
         plot.add_centroids_x(source, **kwargs)
 
     def add_centroids_y(self, plot: PlotSpectrum, data: ty.Dict, **kwargs):
-        """Add horizontal centroids/lines to a particular plot
+        """Add horizontal centroids/lines to a particular plot.
 
         Parameters
         ----------
@@ -907,7 +907,7 @@ class PlotStore:
         plot.add_centroids_y(source, **kwargs)
 
     def add_scatter(self, plot: PlotSpectrum, data: ty.Dict, **kwargs):
-        """Add scatter points to a particular plot
+        """Add scatter points to a particular plot.
 
         Parameters
         ----------
@@ -939,7 +939,7 @@ class PlotStore:
 
     @staticmethod
     def link_plots(plot_one: Plot, plot_two: Plot, x_axis: bool = False, y_axis: bool = False):
-        """Link the x/y-axis of two plots"""
+        """Link the x/y-axis of two plots."""
         if not x_axis and not y_axis:
             return
         if x_axis:

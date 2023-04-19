@@ -3,7 +3,7 @@ from enum import Enum
 
 
 class Position(str, Enum):
-    """Position enum"""
+    """Position enum."""
 
     ABOVE = "above"
     RIGHT = "right"

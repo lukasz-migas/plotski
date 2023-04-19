@@ -1,4 +1,4 @@
-"""Classes to generate bokeh plots"""
+"""Classes to generate bokeh plots."""
 import os
 import typing as ty
 import webbrowser
@@ -8,13 +8,14 @@ import numpy as np
 from bokeh.io.export import get_layout_html
 from bokeh.layouts import column, row
 from bokeh.models import Band, BoxAnnotation, ColumnDataSource, Div, Glyph, LabelSet, Span
+from koyo.utilities import get_min_max
 
 from plotski.enums import Position
-from plotski.utilities import check_source, get_min_max
+from plotski.utilities import check_source
 
 
 class Plot:
-    """Base class for all other plots"""
+    """Base class for all other plots."""
 
     _div_title, _div_header, _div_footer = None, None, None
 
@@ -37,7 +38,7 @@ class Plot:
         initialize: bool = True,
         **kwargs,
     ):
-        """Base class for interactive plots
+        """Base class for interactive plots.
 
         Note: Not intended to be used directly and instead, please use one of the subclasses which implement the
         actual visualisation(s)
@@ -52,14 +53,18 @@ class Plot:
             Label used along x-axis label.
         y_axis_label : str
             Label used along the y-axis label.
+        plot_type : str
+            Plot type.
+        initialize : bool
+            Initialize parameters.
         kwargs :
             Dictionary containing key:value parameters to prettify Bokeh plots.
         """
         self.name = None
         self.output_dir = output_dir
         self.plot_type = plot_type
-        self.plots: ty.Dict[str, Glyph] = dict()
-        self.annotations = dict()
+        self.plots: ty.Dict[str, Glyph] = {}
+        self.annotations = {}
         self._layout = None
         self.div_title = kwargs.pop("title", "")
         self.div_header = kwargs.pop("header", "")
@@ -70,7 +75,7 @@ class Plot:
 
         # plot attributes
         self.kwargs = kwargs
-        self.metadata = dict(x_axis_label=x_axis_label, y_axis_label=y_axis_label)
+        self.metadata = {"x_axis_label": x_axis_label, "y_axis_label": y_axis_label}
 
         self.source = source
         self.check_data_source()
@@ -97,7 +102,7 @@ class Plot:
         self.figure.height = self.kwargs.get("height", self.HEIGHT)
 
     def check_data_source(self):
-        """Ensure that each field in the data source is correct"""
+        """Ensure that each field in the data source is correct."""
         check_source(self.source, self.DATA_KEYS)
 
     def set_options(self):
@@ -107,37 +112,37 @@ class Plot:
         """Set hover on figure."""
 
     def initialize_options(self):
-        """Initialize extra options"""
+        """Initialize extra options."""
         if "tools" not in self.kwargs:
             self.kwargs["tools"] = self.TOOLS
         if "active_drag" not in self.kwargs and self.ACTIVE_DRAG is not None:
             self.kwargs["active_drag"] = self.ACTIVE_DRAG
 
     def set_figure_attributes(self):
-        """Initialize common plot attributes"""
+        """Initialize common plot attributes."""
         self.figure.xaxis.axis_label_text_baseline = "bottom"
         self.figure.xaxis.axis_label = self.metadata["x_axis_label"]
         self.figure.yaxis.axis_label = self.metadata["y_axis_label"]
 
     def set_title(self, text: str, bold: bool = True):
-        """Set title text on the title div"""
+        """Set title text on the title div."""
         if bold:
             text = f"<b>{text}</b>"
         self.div_title.text = text
 
     @property
     def div_title(self):
-        """Return title"""
+        """Return title."""
         return Div(text=f"<b>{self._div_title}</b>")
 
     @div_title.setter
     def div_title(self, value: str):
-        """Set title"""
+        """Set title."""
         self._div_title = value
 
     @property
     def div_header(self):
-        """Return header"""
+        """Return header."""
         return Div(text=self._div_header)
 
     @div_header.setter
@@ -147,12 +152,12 @@ class Plot:
 
     @property
     def div_footer(self):
-        """Return footer"""
+        """Return footer."""
         return Div(text=self._div_footer, visible=True if self._div_footer else False)
 
     @div_footer.setter
     def div_footer(self, value: str):
-        """Set title"""
+        """Set title."""
         self._div_footer = value
 
     @property
@@ -167,14 +172,14 @@ class Plot:
 
     @property
     def layout(self):
-        """Get layout"""
+        """Get layout."""
         return self.set_layout()
 
     def set_ranges(self, **kwargs):
-        """Set x/y-axis range"""
+        """Set x/y-axis range."""
 
     def set_layout(self, init_range: bool = True):
-        """Setup plot layout
+        """Setup plot layout.
 
         Each plot consists of three elements:
         TITLE DIV - title of the plot
@@ -215,14 +220,14 @@ class Plot:
         #     self.figure.y_range = y_range
 
     def add_extents(self, x: ty.Optional[np.ndarray] = None, y: ty.Optional[np.ndarray] = None):
-        """Add x-axis extents"""
+        """Add x-axis extents."""
         if x is not None:
             self._x_extents.append(get_min_max(x))
         if y is not None:
             self._y_extents.append(get_min_max(y))
 
     def get_extents(self, **kwargs):
-        """Get x and y-axis extents"""
+        """Get x and y-axis extents."""
         x_min, x_max = get_min_max(self._x_extents)
         x_min, x_max = kwargs.get("x_min", x_min), kwargs.get("x_max", x_max)
         y_min, y_max = get_min_max(self._y_extents)
@@ -230,24 +235,24 @@ class Plot:
         return x_min, x_max, y_min, y_max
 
     def add_box(self, data: ty.Dict, **kwargs):
-        """Add box annotation to the plot"""
+        """Add box annotation to the plot."""
         box = BoxAnnotation(**data, **kwargs)
         self.figure.add_layout(box)
         self.annotations[box.id] = (data, "BoxAnnotation")
 
     def add_patch(self, data: ty.Dict, **kwargs):
-        """Add generic polygon/patch to the plot"""
+        """Add generic polygon/patch to the plot."""
         patch = self.figure.patch(*data, **kwargs)
         self.annotations[patch.id] = (data, "Patch")
 
     def add_labels(self, source: ColumnDataSource, **kwargs):
-        """Add multiple labels to the plot"""
+        """Add multiple labels to the plot."""
         labels = LabelSet(x="x", y="y", text="text", source=source, **kwargs)
         self.figure.add_layout(labels)
         self.annotations[labels.id] = (source, "LabelSet")
 
     def add_band(self, source: ColumnDataSource, **kwargs):
-        """Add band to the plot"""
+        """Add band to the plot."""
         band = Band(
             base="base", lower="lower", upper="upper", source=source, level=kwargs.get("level", "underlay"), **kwargs
         )
@@ -255,7 +260,7 @@ class Plot:
         self.annotations[band.id] = (source, "Band")
 
     def add_span(self, data: ty.Dict, **kwargs):
-        """Add span to the plot"""
+        """Add span to the plot."""
         location = data["location"]
         if not isinstance(location, Iterable):
             location = [location]
@@ -263,10 +268,10 @@ class Plot:
         for loc in location:
             span = Span(location=loc, dimension=data["dimension"], **kwargs)
             self.figure.add_layout(span)
-            self.annotations[span.id] = (dict(location=loc, dimension=data["dimension"]), "Span")
+            self.annotations[span.id] = ({"location": loc, "dimension": data["dimension"]}, "Span")
 
     def save(self, filepath: ty.Optional[str] = None, show: bool = True):
-        """Save Bokeh plot as HTML file
+        """Save Bokeh plot as HTML file.
 
         Parameters
         ----------
@@ -275,7 +280,6 @@ class Plot:
         show : bool
             if 'True', newly generated document will be shown in the browser
         """
-
         if filepath is None:
             filepath = os.path.join(self.output_dir, self.plot_type + ".html")
 

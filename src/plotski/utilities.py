@@ -1,7 +1,5 @@
-"""Various utilities"""
+"""Various utilities."""
 import random
-import typing as ty
-from uuid import uuid4
 
 import matplotlib.colors as colors
 import numpy as np
@@ -21,7 +19,7 @@ def get_colormap(cmap: str):
 
 
 def convert_colormap_to_mapper(array, colormap="viridis", palette=None, z_min=None, z_max=None):
-    """Convert matplotlib colormap to Bokeh color mapper
+    """Convert matplotlib colormap to Bokeh color mapper.
 
     Parameters
     ----------
@@ -29,7 +27,8 @@ def convert_colormap_to_mapper(array, colormap="viridis", palette=None, z_min=No
         array
     colormap : str
         name of the colormap
-    palette :
+    palette : str, optional
+        name of the palette, by default None
     z_min : float
         starting intensity for the colormap
     z_max : float
@@ -59,33 +58,6 @@ def convert_colormap_to_mapper(array, colormap="viridis", palette=None, z_min=No
     return _palette, _color_mapper
 
 
-def rescale(values: ty.Union[np.ndarray, ty.List], new_min: float, new_max: float, dtype=None) -> np.ndarray:
-    """Rescale values from one range to another
-
-    Parameters
-    ----------
-    values : Union[np.ndarray, List]
-        input range
-    new_min : float
-        new minimum value
-    new_max : float
-        new maximum value
-    dtype :
-        data type
-
-    Returns
-    -------
-    new_values : np.ndarray
-        rescaled range
-    """
-    values = np.asarray(values)
-    if dtype is None:
-        dtype = values.dtype
-    old_min, old_max = np.min(values), np.max(values)
-    new_values = ((values - old_min) / (old_max - old_min)) * (new_max - new_min) + new_min
-    return new_values.astype(dtype)
-
-
 def convert_hex_to_rgb_1(hex_str, decimals=3):
     """Convert hex color to rgb in range 0-1."""
     hex_color = hex_str.lstrip("#")
@@ -98,34 +70,24 @@ def convert_hex_to_rgb_255(hex_str):
     """Convert hex color to rgb in range 0-255."""
     hex_color = hex_str.lstrip("#")
     n = len(hex_color)
-    rgb = list(int(hex_color[i : i + int(n / 3)], 16) for i in range(0, int(n), int(n / 3)))
+    rgb = [int(hex_color[i : i + int(n / 3)], 16) for i in range(0, int(n), int(n / 3))]
     return rgb
 
 
 def get_random_hex_color():
-    """Return random hex color"""
+    """Return random hex color."""
     return "#%06x" % random.randint(0, 0xFFFFFF)
 
 
-def get_min_max(values):
-    """Get the minimum and maximum value of an array"""
-    return [np.min(values), np.max(values)]
-
-
-def get_unique_str():
-    """Gives random, unique name"""
-    return str(uuid4().hex)
-
-
 def check_key(source, key):
-    """Helper function to check source has a particular field"""
+    """Helper function to check source has a particular field."""
     if key in source.data:
         return True
     return False
 
 
 def check_source(source, keys):
-    """Helper function to check source has all of the required fields"""
+    """Helper function to check source has all of the required fields."""
     missing = []
     for key in keys:
         if key not in source.data:
@@ -135,8 +97,9 @@ def check_source(source, keys):
 
 
 def calculate_aspect_ratio(shape, plot_width):
-    """Calculate aspect ratio by computing the ratio between the height and width of an array and multiplying it
-    by plot width
+    """Calculate aspect ratio.
+
+     It is calculated by computing the ratio between the height and width of an array. and multiplying it by plot width.
 
     Parameters
     ----------

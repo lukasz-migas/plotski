@@ -8,7 +8,7 @@ from plotski.utilities import calculate_aspect_ratio
 
 
 class PlotImageBase(Plot):
-    """Basic heatmap plot"""
+    """Basic heatmap plot."""
 
     # Data attributes
     DATA_KEYS = ("image", "x", "y", "dw", "dh")
@@ -54,7 +54,7 @@ class PlotImageBase(Plot):
         )
 
     def initialize_options(self):
-        """Setup few options"""
+        """Setup few options."""
         from plotski.utilities import convert_colormap_to_mapper
 
         # setup some common options if the user has not specified them
@@ -109,7 +109,7 @@ class PlotImageBase(Plot):
         self.figure.height = self.kwargs.get("height", height)
 
     def check_data_source(self):
-        """Ensure that each field in the data source is correct"""
+        """Ensure that each field in the data source is correct."""
         if "image" not in self.source.data:
             raise ValueError("Missing field 'image' in the ColumnDataSource")
         if "image" in self.source.data:
@@ -127,7 +127,7 @@ class PlotImageBase(Plot):
 
 
 class PlotImage(PlotImageBase):
-    """Image class"""
+    """Image class."""
 
     def __init__(self, output_dir: str, source: ColumnDataSource, title="Image", **kwargs):
         PlotImageBase.__init__(self, output_dir, source=source, title=title, plot_type="image", **kwargs)
