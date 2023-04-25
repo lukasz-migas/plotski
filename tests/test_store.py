@@ -63,7 +63,7 @@ class TestPlotStore:
         store = make_store()
         tab_names = ["tab 1", "tab 2"]
         store.add_tabs(tab_names)
-        assert all([tab_name in store.tabs for tab_name in tab_names])
+        assert all(tab_name in store.tabs for tab_name in tab_names)
         assert len(store.tabs) == 2
 
     @staticmethod

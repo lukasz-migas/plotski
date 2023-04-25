@@ -125,7 +125,7 @@ class PlotStore:
                 tab_names = [tab_names]
 
         # check that each tab name is actually present in the tab store
-        if not all([tab_name in self.tabs for tab_name in tab_names]):
+        if not all(tab_name in self.tabs for tab_name in tab_names):
             raise ValueError("Some of the specified tab names are not present in the figure store")
 
         # initialize panel store
