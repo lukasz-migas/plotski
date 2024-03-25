@@ -1,4 +1,5 @@
 """Module containing functions that generate RGB plots."""
+
 import typing as ty
 from itertools import cycle
 
@@ -381,6 +382,7 @@ class ImageRGBA:
             minimum clipping value
         max_value : Union[int, float]
             maximum clipping value
+
         Returns
         -------
         image : np.ndarray
