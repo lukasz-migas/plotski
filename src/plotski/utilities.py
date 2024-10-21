@@ -1,4 +1,5 @@
 """Various utilities."""
+
 import random
 
 import matplotlib.colors as colors

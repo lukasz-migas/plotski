@@ -1,4 +1,5 @@
 """Test imimspy.visualise.store.py"""
+
 import os
 
 import numpy as np
