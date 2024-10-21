@@ -1,4 +1,5 @@
 """Scatter plot."""
+
 from bokeh.models import ColumnDataSource, HoverTool, Range1d
 from bokeh.plotting import figure
 

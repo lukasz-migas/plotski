@@ -1,4 +1,5 @@
 """Custom plots."""
+
 from bokeh.models import ColumnDataSource
 
 from plotski.spectrum.plot import PlotButterflySpectrum, PlotCentroid, PlotSpectrum
