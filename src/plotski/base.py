@@ -1,4 +1,5 @@
 """Classes to generate bokeh plots."""
+
 import os
 import typing as ty
 import webbrowser
