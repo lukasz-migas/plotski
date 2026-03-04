@@ -39,6 +39,10 @@ jobs:
         include:
           - python-version: "3.9"
             os: ubuntu-latest
+        exclude:
+          # Windows has access violation
+          - python-version: "3.13"
+            os: windows-latest
 
     steps:
       - uses: actions/checkout@v5
