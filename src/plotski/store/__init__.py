@@ -1,4 +1,5 @@
 """Bokeh plot store."""
+
 import os
 import typing as ty
 import warnings
