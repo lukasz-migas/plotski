@@ -1,4 +1,5 @@
 """Base plot."""
+
 from bokeh.models import ColumnDataSource, HoverTool, Legend, Range1d
 from bokeh.plotting import figure
 

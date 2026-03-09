@@ -1,4 +1,5 @@
 """Image."""
+
 import numpy as np
 from bokeh.models import BasicTicker, BoxZoomTool, ColorBar, ColumnDataSource, HoverTool, Range1d
 from bokeh.plotting import figure
