@@ -8,6 +8,7 @@ available in newer versions.
 This script does nothing if the 'MIN_REQ' environment variable is anything
 other than '1'.
 """
+
 import os
 from configparser import ConfigParser
 from pathlib import Path
