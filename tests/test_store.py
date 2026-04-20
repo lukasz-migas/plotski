@@ -1,4 +1,5 @@
 """Test imimspy.visualise.store.py"""
+
 import os
 
 import numpy as np
@@ -109,7 +110,7 @@ class TestPlotStore:
         store.plot_image(tab_name, {"image": [image]}, layout_name=row_name)
         assert row_name in store.tabs[tab_name]
         assert len(store.tabs[tab_name][row_name]) == 2
-        assert type(store[tab_name][row_name]) == containers.Row
+        assert isinstance(store[tab_name][row_name], containers.Row)
 
     @staticmethod
     def test_add_col(make_store):
@@ -138,7 +139,7 @@ class TestPlotStore:
         store.plot_image(tab_name, {"image": [image]}, layout_name=col_name)
         assert col_name in store.tabs[tab_name]
         assert len(store.tabs[tab_name][col_name]) == 2
-        assert type(store[tab_name][col_name]) == containers.Column
+        assert isinstance(store[tab_name][col_name], containers.Column)
 
     @staticmethod
     def test_add_grid(make_store):
@@ -168,7 +169,7 @@ class TestPlotStore:
         store.plot_image(tab_name, {"image": [image]}, layout_name=col_name)
         assert col_name in store.tabs[tab_name]
         assert len(store.tabs[tab_name][col_name]) == 3
-        assert type(store[tab_name][col_name]) == containers.Grid
+        assert isinstance(store[tab_name][col_name], containers.Grid)
 
     @staticmethod
     def test_add_spectrum(make_store):

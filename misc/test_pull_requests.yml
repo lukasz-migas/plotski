@@ -22,13 +22,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        task: [black, isort, ruff]
+        task: [ruff, ruff-format]
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python 3.8
+      - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: 3.10
       - name: Install dependencies
         run: |
           pip install --upgrade pip
@@ -42,10 +42,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python 3.8
+      - name: Set up Python 3.10
         uses: actions/setup-python@v4
         with:
-          python-version: 3.8
+          python-version: 3.10
       - name: Install dependencies
         run: |
           pip install --upgrade pip
@@ -61,16 +61,16 @@ jobs:
       fail-fast: false
       matrix:
         platform: [ubuntu-latest]
-        python: ["3.8", "3.9", "3.10"]
+        python: ["3.10", "3.11", "3.12", "3.13"]
         include:
-          # Windows py38
-          - python: 3.8
+          # Windows py310
+          - python: 3.10
             platform: windows-latest
-          # MacOS py39
-          - python: 3.9
+          # MacOS py311
+          - python: 3.11
             platform: macos-latest
           # Minimum requirements
-          - python: 3.8
+          - python: 3.10
             platform: ubuntu-20.04
             MIN_REQ: 1
 
@@ -87,7 +87,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
           cache: "pip"
-          cache-dependency-path: setup.cfg
+          cache-dependency-path: pyproject.toml
 
       # tox and tox-gh-actions will take care of the "actual" installation
       # of python dependendencies into a virtualenv.  see tox.ini for more
@@ -104,8 +104,8 @@ jobs:
       # here we pass off control of environment creation and running of tests to tox
       # tox-gh-actions, installed above, helps to convert environment variables into
       # tox "factors" ... limiting the scope of what gets tested on each platform
-      # for instance, on ubuntu-latest with python 3.8, it would be equivalent to this command:
-      # `tox -e py38-linux-pyqt,py38-linux-pyside`
+      # for instance, on ubuntu-latest with python 3.10, it would be equivalent to this command:
+      # `tox -e py310-linux`
       # see tox.ini for more
       - name: Test with tox
         run: python -m tox
@@ -119,17 +119,17 @@ jobs:
         uses: codecov/codecov-action@v3
 
 #  test_pip_install:
-#    name: ubuntu-latest 3.8 pip install
+#    name: ubuntu-latest 3.10 pip install
 #    runs-on: ubuntu-latest
 #    steps:
 #      - uses: actions/checkout@v3
 #        with:
 #          path: pyspa-from-github
 #
-#      - name: Set up Python 3.9
+#      - name: Set up Python 3.10
 #        uses: actions/setup-python@v4
 #        with:
-#          python-version: 3.9
+#          python-version: 3.10
 #          cache: "pip"
 #          cache-dependency-path: pyspa-from-github/setup.cfg
 #

@@ -1,4 +1,5 @@
 """Module containing functions that generate RGB plots."""
+
 import typing as ty
 from itertools import cycle
 
@@ -45,12 +46,12 @@ class ImageRGBA:
         list of colors - if None have been specified, a set of defaults will be used instead
     """
 
-    def __init__(self, images: ty.List[np.ndarray], colors: ty.Optional[ty.List] = None):
+    def __init__(self, images: ty.List[np.ndarray], colors: ty.List | None = None):
         """Class to quickly generate composite RGBA images based on ion (or other) images."""
         self.validate(images, colors)
 
         self._original, self._images, self._colors = self.setup(images, colors)
-        self._rgba: ty.Optional[np.ndarray] = None
+        self._rgba: np.ndarray | None = None
 
     def __repr__(self):
         return f"ImageRGBA <images={len(self._images)}>"
@@ -84,13 +85,13 @@ class ImageRGBA:
         return self._rgba
 
     @rgba.setter
-    def rgba(self, array: ty.Optional[np.ndarray]):
+    def rgba(self, array: np.ndarray | None):
         if array is not None and array.shape[2] != 4:
             raise ValueError("Cannot set RGBA array without the alpha channel")
         self._rgba = array
 
     @staticmethod
-    def validate(images: ty.List[np.ndarray], colors: ty.Optional[ty.List[str]]) -> None:
+    def validate(images: ty.List[np.ndarray], colors: ty.List[str] | None) -> None:
         """Validate image input.
 
         Parameters
@@ -138,9 +139,7 @@ class ImageRGBA:
         """Reset the store RGBA array to ignore previously made changes (e.g. channel normalizations)."""
         self.rgba = None
 
-    def setup(
-        self, images: ty.List[np.ndarray], colors: ty.Optional[ty.List[str]]
-    ) -> ty.Tuple[ty.List, ty.List, ty.List]:
+    def setup(self, images: ty.List[np.ndarray], colors: ty.List[str] | None) -> ty.Tuple[ty.List, ty.List, ty.List]:
         """Clean-up and remap images to appropriate color.
 
         Parameters
@@ -163,7 +162,7 @@ class ImageRGBA:
             colors = [next(COLORS) for _ in images]
 
         _images = []
-        for image, color in zip(images, colors):
+        for image, color in zip(images, colors, strict=False):
             if len(image.shape) == 2:
                 image = self._to_rgb(image, self._convert_color(color))
             _images.append(image)
@@ -231,7 +230,7 @@ class ImageRGBA:
         self._images[image_id] = self._to_rgb(self._original[image_id], self._convert_color(color))
         self.reset()
 
-    def get_one(self, image_id: int, keep_alpha: bool = False, dtype=np.uint8, fill_alpha: ty.Optional[int] = None):
+    def get_one(self, image_id: int, keep_alpha: bool = False, dtype=np.uint8, fill_alpha: int | None = None):
         """Retrieve single 3/4D image.
 
         Parameters
@@ -260,7 +259,7 @@ class ImageRGBA:
             return image
         return self._images[image_id][:, :, :3].astype(dtype)
 
-    def get_rgba(self, fill_alpha: ty.Optional[int] = None):
+    def get_rgba(self, fill_alpha: int | None = None):
         """Retrieve RGBA image."""
         image = self.rgba
         if fill_alpha is not None and isinstance(fill_alpha, int):
@@ -310,8 +309,8 @@ class ImageRGBA:
     def clip_channel(
         self,
         channel: int,
-        min_int: ty.Optional[ty.Union[int, float]] = None,
-        max_int: ty.Optional[ty.Union[int, float]] = None,
+        min_int: ty.Union[int, float] | None = None,
+        max_int: ty.Union[int, float] | None = None,
     ):
         """Normalize image channel to increase/decrease intensity.
 
@@ -381,6 +380,7 @@ class ImageRGBA:
             minimum clipping value
         max_value : Union[int, float]
             maximum clipping value
+
         Returns
         -------
         image : np.ndarray
@@ -394,7 +394,7 @@ class ImageRGBA:
         return image
 
     # noinspection PyTypeChecker
-    def quantile_rescale(self, q_low: float = 0.02, q_high: float = 0.98, image: ty.Optional[np.ndarray] = None):
+    def quantile_rescale(self, q_low: float = 0.02, q_high: float = 0.98, image: np.ndarray | None = None):
         """Contrast enhancement using stretching or shrinking of intensity levels.
 
         Returns
@@ -421,7 +421,7 @@ class ImageRGBA:
         return exposure.rescale_intensity(image, in_range=(p_low, p_high))
 
     # noinspection PyTypeChecker
-    def equalize_histogram(self, n_bins: int = 256, image: ty.Optional[np.ndarray] = None, as_int: bool = False):
+    def equalize_histogram(self, n_bins: int = 256, image: np.ndarray | None = None, as_int: bool = False):
         """Contrast enhancement using histogram equalization.
 
         Parameters
@@ -446,7 +446,7 @@ class ImageRGBA:
         return array
 
     def adaptive_histogram(
-        self, clip_limit: float = 0.01, n_bins: int = 256, image: ty.Optional[np.ndarray] = None, as_int: bool = False
+        self, clip_limit: float = 0.01, n_bins: int = 256, image: np.ndarray | None = None, as_int: bool = False
     ):
         """Contrast Limited Adaptive Histogram Equalization.
 
@@ -476,7 +476,7 @@ class ImageRGBA:
             return (array * 255).astype(np.uint8)
         return array
 
-    def contrast_stretching(self, in_range="image", image: ty.Optional[np.ndarray] = None, as_int: bool = False):
+    def contrast_stretching(self, in_range="image", image: np.ndarray | None = None, as_int: bool = False):
         """Contrast Limited Adaptive Histogram Equalization.
 
         Locally enhance contrast of a RGBA image. The algorithm computes histograms over different tile regions of

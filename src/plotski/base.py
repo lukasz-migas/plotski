@@ -1,4 +1,5 @@
 """Classes to generate bokeh plots."""
+
 import os
 import typing as ty
 import webbrowser
@@ -22,7 +23,7 @@ class Plot:
     # Data attributes
     DATA_KEYS: ty.Tuple[str, ...] = ()
     TOOLS: ty.Tuple[str, ...] = ("pan", "box_zoom", "reset")
-    ACTIVE_DRAG: ty.Optional[str] = None
+    ACTIVE_DRAG: str | None = None
 
     # Defaults
     WIDTH = 600
@@ -219,7 +220,7 @@ class Plot:
         #         y_range = x_range.figure.y_range
         #     self.figure.y_range = y_range
 
-    def add_extents(self, x: ty.Optional[np.ndarray] = None, y: ty.Optional[np.ndarray] = None):
+    def add_extents(self, x: np.ndarray | None = None, y: np.ndarray | None = None):
         """Add x-axis extents."""
         if x is not None:
             self._x_extents.append(get_min_max(x))
@@ -270,7 +271,7 @@ class Plot:
             self.figure.add_layout(span)
             self.annotations[span.id] = ({"location": loc, "dimension": data["dimension"]}, "Span")
 
-    def save(self, filepath: ty.Optional[str] = None, show: bool = True):
+    def save(self, filepath: str | None = None, show: bool = True):
         """Save Bokeh plot as HTML file.
 
         Parameters

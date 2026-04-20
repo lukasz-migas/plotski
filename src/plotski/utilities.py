@@ -1,4 +1,5 @@
 """Various utilities."""
+
 import random
 
 import matplotlib.colors as colors
@@ -76,7 +77,7 @@ def convert_hex_to_rgb_255(hex_str):
 
 def get_random_hex_color():
     """Return random hex color."""
-    return "#%06x" % random.randint(0, 0xFFFFFF)
+    return f"#{random.randint(0, 0xFFFFFF):06x}"
 
 
 def check_key(source, key):

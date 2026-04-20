@@ -1,4 +1,5 @@
 """Bokeh plot store."""
+
 import os
 import typing as ty
 import warnings
@@ -84,8 +85,7 @@ class PlotStore:
                 missing.append(key)
         if missing:
             raise ValueError(
-                f"Provided data is missing some keys. Expected: {', '.join(keys)}."
-                f" Missing keys: {', '.join(missing)}"
+                f"Provided data is missing some keys. Expected: {', '.join(keys)}. Missing keys: {', '.join(missing)}"
             )
 
     def show(self, tab_names=None, always_as_tabs: bool = True):
@@ -94,7 +94,7 @@ class PlotStore:
 
         return show(self.get_layout(tab_names, always_as_tabs))
 
-    def get_layout(self, tab_names: ty.Optional[ty.List[str]] = None, always_as_tabs: bool = True):
+    def get_layout(self, tab_names: ty.List[str] | None = None, always_as_tabs: bool = True):
         """Return fully ordered Bokeh document which can be visualised (using 'show' command) or exported as HTML.
 
         Parameters
@@ -292,7 +292,7 @@ class PlotStore:
         self.tabs[tab_name][col_name] = Column()
         return col_name
 
-    def add_grid(self, tab_name: str, n_cols: ty.Optional[int] = None) -> str:
+    def add_grid(self, tab_name: str, n_cols: int | None = None) -> str:
         """Add grid to particular tab.
 
         Parameters
@@ -674,7 +674,7 @@ class PlotStore:
         >>> y = np.arange(10)
         >>> store = PlotStore("")
         >>> _, _, plot = store.plot_spectrum("plot", dict(x=x, y=y))
-        >>> store.add_band(plot, dict(base=x, lower=y-3, upper=y+3))
+        >>> store.add_band(plot, dict(base=x, lower=y - 3, upper=y + 3))
         """
         if not hasattr(plot, "add_band"):
             raise ValueError("Cannot add band to this plot")

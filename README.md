@@ -14,6 +14,11 @@ additional annotations and enable easy exportation to HTML document.
 
 All plots are generated using the excellent `bokeh` library.
 
+Supported runtime baseline:
+- Python 3.10+
+- NumPy 2+
+- pandas 2+ environments are supported, although `plotski` does not require pandas directly
+
 Typical usage might be
 
 ```python

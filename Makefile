@@ -47,10 +47,13 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
-lint: ## check style with flake8
-	black .
-	isort .
-	flake8 src/annotine tests
+lint: ## check style with Ruff
+	ruff check .
+	ruff format --check .
+
+format: ## auto-fix style issues with Ruff
+	ruff check --fix .
+	ruff format .
 
 test: ## run tests quickly with the default Python
 	pytest
@@ -92,8 +95,9 @@ develop:
 pre:
 	pre-commit run -a
 
-flake8:
-	flake8 src/annotine tests
+ruff:
+	ruff check .
+	ruff format --check .
 
 untrack:
 	git rm -r --cached .
