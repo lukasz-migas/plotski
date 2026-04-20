@@ -9,38 +9,60 @@ on:
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * 0" # every week (for --pre release tests)
+    - cron: "0 0 * * 0" # weekly CI health check
+
+permissions:
+  contents: read
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
 
+env:
+  FORCE_COLOR: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Install dev dependencies
+        run: uv sync --extra dev
+
+      - name: Ruff check
+        run: uv run --no-sync ruff check .
+
+      - name: Ruff format
+        run: uv run --no-sync ruff format --check .
+
   check-manifest:
     name: Check Manifest
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
-      - run: uvx check-manifest
+      - uses: actions/checkout@v5
 
-  test:
-    name: Test (${{ matrix.os }} py${{ matrix.python-version }})
-    runs-on: ${{ matrix.os }}
-    env:
-      UV_NO_SYNC: "1"
-      UV_MANAGED_PYTHON: "1"
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-        exclude:
-          # Windows has access violation
-          - python-version: "3.13"
-            os: windows-latest
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
 
+      - name: Check manifest
+        run: uvx check-manifest
+
+  build:
+    name: Build Distributions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
         with:
@@ -48,91 +70,75 @@ jobs:
 
       - uses: astral-sh/setup-uv@v7
         with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - name: Build distributions
+        run: uvx --from build pyproject-build --sdist --wheel --outdir dist
+
+      - name: Check distributions
+        run: uvx twine check --strict dist/*
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*
+          retention-days: 7
+
+  test:
+    name: Test (${{ matrix.os }} py${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    env:
+      UV_MANAGED_PYTHON: "1"
+      NUMBA_DISABLE_JIT: ${{ matrix.os == 'ubuntu-latest' && '1' || '0' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        exclude:
+          - python-version: "3.13"
+            os: windows-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: astral-sh/setup-uv@v7
+        with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
 
-      - run: uv sync --no-dev --extra test
+      - name: Install test dependencies
+        run: uv sync --no-dev --extra test
+
+      - name: Test with coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        run: uv run --no-sync coverage run -m pytest -v --color=yes
 
       - name: Test
-        env:
-          NUMBA_DISABLE_JIT: ${{ matrix.os == 'ubuntu-latest' && '1' || '0' }}
-        run: uv run coverage run -p -m pytest -v --color=yes
+        if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12'
+        run: uv run --no-sync pytest -v --color=yes
 
-      # If something goes wrong, we can open an issue in the repo
-      - name: Report --pre Failures
-        if: failure() && github.event_name == 'schedule'
-        uses: JasonEtco/create-an-issue@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PLATFORM: ${{ matrix.platform }}
-          PYTHON: ${{ matrix.python-version }}
-          RUN_ID: ${{ github.run_id }}
-          TITLE: '[test-bot] pip install --pre is failing'
-        with:
-          filename: .github/TEST_FAIL_TEMPLATE.md
-          update_existing: true
-
-      - name: Coverage
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
         uses: codecov/codecov-action@v5
 
-#  test:
-#    uses: pyapp-kit/workflows/.github/workflows/test-pyrepo.yml@v2
-#    secrets: inherit
-#    with:
-#      os: ${{ matrix.os }}
-#      python-version: ${{ matrix.python-version }}
-#      pip-install-pre-release: ${{ github.event_name == 'schedule' }}
-#      report-failures: ${{ github.event_name == 'schedule' }}
-#      extras: 'pptx,test'
-#      # changing this to "artifact" prevents uploading to codecov here,
-#      # instead it uploads an artifact with the coverage data
-#      coverage-upload: artifact
-#
-#    strategy:
-#      fail-fast: false
-#      matrix:
-#        os: [ubuntu-latest, windows-latest]
-#        python-version: ["3.10", "3.11", "3.12", "3.13"]
-#        include:
-#          - python-version: "3.10"
-#            os: macos-13
-#          - python-version: "3.11"
-#            os: macos-latest
-#          - python-version: "3.12"
-#            os: macos-latest
-#
-#
-#  # now add a job to combine and upload the coverage
-#  upload_coverage:
-#    if: always()
-#    needs: [test]
-#    uses: pyapp-kit/workflows/.github/workflows/upload-coverage.yml@v2
-#    secrets:
-#      codecov_token: ${{ secrets.CODECOV_TOKEN }}
-
-
   deploy_testpypi:
-    name: Deploy to TestPyPI
-    needs: [test, check-manifest]
-    if: success() && startsWith(github.ref, 'refs/tags/') && github.event_name != 'schedule'
+    name: Publish to TestPyPI
+    needs: [lint, check-manifest, build, test]
+    if: startsWith(github.ref, 'refs/tags/') && github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       id-token: write
-      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Download distributions
+        uses: actions/download-artifact@v4
         with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
-      - name: Build
-        run: |
-          python -m pip install build
-          python -m build
+          name: dist
+          path: dist
 
       - name: Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -141,27 +147,19 @@ jobs:
           password: ${{ secrets.TEST_PYPI_TOKEN }}
 
   deploy_pypi:
-    name: Deploy to PyPI
-    needs: [test, check-manifest, deploy_testpypi]
-    if: success() && startsWith(github.ref, 'refs/tags/') && github.event_name != 'schedule'
+    name: Publish to PyPI
+    needs: [deploy_testpypi]
+    if: startsWith(github.ref, 'refs/tags/') && github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       id-token: write
-      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Download distributions
+        uses: actions/download-artifact@v4
         with:
-          fetch-depth: 0
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.x"
-
-      - name: Build
-        run: |
-          python -m pip install build
-          python -m build
+          name: dist
+          path: dist
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -169,29 +167,26 @@ jobs:
           password: ${{ secrets.PYPI_TOKEN }}
 
   publish:
-    name: Publish to GitHub Releases
-    needs: [test, check-manifest, deploy_pypi]
-    if: success() && startsWith(github.ref, 'refs/tags/') && github.event_name != 'schedule'
+    name: Publish GitHub Release
+    needs: [deploy_pypi]
+    if: startsWith(github.ref, 'refs/tags/') && github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
-      id-token: write
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Download distributions
+        uses: actions/download-artifact@v4
         with:
-          python-version: "3.x"
+          name: dist
+          path: dist
 
-      - name: Build
-        run: |
-          python -m pip install build
-          python -m build
-
-      - uses: softprops/action-gh-release@v2
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
           files: dist/*
