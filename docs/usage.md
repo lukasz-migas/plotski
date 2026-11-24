@@ -22,11 +22,16 @@ grid.link_axes(sample, reference)
 report.save("run-overview.html")
 ```
 
-A figure or tab stacks standalone subplots and grids in the order they are added.
-Content added directly to the figure appears above the tabs. Grid coordinates are
-zero-based. Omit both coordinates to fill the first slot that fits, scanning rows
-from left to right. Use `rowspan` and `colspan` to cover several cells. A grid with
-one row or one column provides a horizontal or vertical arrangement.
+A figure or tab displays plots, grids, text, and tables in insertion order.
+Content added directly to the figure appears above the tabs. Use
+`add_text(text, kind="heading")` for headings, `kind="caption"` for captions,
+and `add_table({"Sample": ["A"], "Peaks": [84]})` for tabular data. Text and
+table cells are plain text.
+
+Grid coordinates are zero-based. Omit both coordinates to fill the first slot
+that fits, scanning rows from left to right. Use `rowspan` and `colspan` to cover
+several cells. Set `cell_width` and `cell_height` on a grid, or `width` and
+`height` on a standalone subplot, to size panels in pixels.
 
 ## Charts and annotations
 
@@ -35,6 +40,7 @@ one row or one column provides a horizontal or vertical arrangement.
 | `line(x, y)`, `scatter(x, y)` | Overlay series by calling the methods on the same subplot. Set `label` for a legend entry. |
 | `segments(x0, y0, x1, y1)` | Draw independent segments, including centroid sticks. |
 | `bar(x, y)` | Use numeric, date, or categorical x coordinates. Width is in axis units, or milliseconds on a date axis. |
+| `bars(categories, series, mode="grouped")` | Plot named series side by side or use `mode="stacked"`. The series mapping determines legend and stack order. Positive and negative stacks build from zero independently. |
 | `histogram(values, bins=10)` | Use a positive bin count or increasing bin edges. Set `density=True` to normalize area to one. |
 | `boxplot(values, categories=...)` | Optionally supply a category per observation. Uses Tukey whiskers and shows outliers. |
 | `area(x, y, baseline=0)`, `band(x, lower, upper)` | Fill between a curve and a baseline, or between two curves. |
@@ -55,21 +61,62 @@ unless an explicit range is supplied. Linked categorical axes share their
 category order. Use `legend=False` or `hover=False` on the subplot to disable
 those interactions across its layers.
 
+`report.link_axes(left, right)` also links numeric or date axes across grids and
+tabs. Linked axes share scale and direction. Use
+`plot.configure_axis("y", scale="log", tick_format=".1e")` for positive intensity
+ranges or `plot.configure_axis("x", reverse=True, tick_format=".2f")` for a
+reversed numeric axis. Limits stay in data units on a log axis. Nonpositive
+line and scatter coordinates produce gaps. Zero-baseline marks such as bars
+and centroid sticks require a linear y axis.
+
+Use `y_error=(lower_delta, upper_delta)` on `scatter` and `bar`. Each delta can
+be a scalar or one value per point. With `bars`, pass a mapping from series
+name to its pair of deltas.
+
 ## Scientific workflows
 
-A mass spectrum or mobilogram is a `line` with labels such as `"m/z"` or
-`"Drift time (bins)"` and `"Intensity"`. Add multiple lines for a spectrum
-overlay, or negate the second intensity array for a butterfly plot.
-Use a zero baseline for centroid sticks.
+Use `spectrum()` or `mobilogram()` for profile traces, and `centroid=True` for
+sticks. Call the method again to overlay a series or pass `mirror=True` for
+the lower half of a butterfly plot. Hover shows the original intensity for
+mirrored data. Axis labels default to `m/z` or `Drift time (bins)` and
+`Intensity`, and you can supply labels when creating the subplot.
 
 ```python
-import numpy as np
+from plotski import Figure
 
-mz = np.array([100, 101, 102])
-intensity = np.array([4, 9, 1])
-plot = report.add_subplot(title="Centroids", x_label="m/z", y_label="Intensity")
-plot.segments(mz, np.zeros_like(intensity), mz, intensity, label="Centroids")
+report = Figure(title="Annotated spectrum", lazy_tabs=True)
+report.add_text("Sample and reference", kind="heading")
+sample = report.add_tab("Sample")
+plot = sample.add_subplot(title="Sample spectrum", width=640, height=320)
+plot.spectrum([100, 101, 102], [4, 9, 1], label="Observed", max_points=2000)
+plot.scatter(
+    [101], [9], label="Assigned peaks", ids=["p1"], selection_group="peaks",
+    hover_fields={"Compound": ["Candidate A"], "Error (ppm)": [0.427]},
+    hover_formats={"x": ".4f", "Error (ppm)": ".2f"},
+)
+sample.add_table(
+    {"Peak": ["p1"], "Compound": ["Candidate A"], "Error (ppm)": [0.43]},
+    title="Peak assignments", ids=["p1"], selection_group="peaks",
+)
+
+reference = report.add_tab("Reference").add_subplot(title="Reference spectrum")
+reference.spectrum([100, 101, 103], [2, 8, 3], centroid=True)
+report.link_axes(plot, reference)
+report.save("annotated-spectrum.html")
 ```
+
+Click a peak or a table row to highlight matching IDs in the same
+`selection_group`. Click it again to clear the selection. The IDs are strings,
+with one per plotted point or row. Repeated IDs highlight all their matches.
+`hover_fields` accepts one value per point and `hover_formats` uses Python
+format specs keyed by field or coordinate name. For segments, the coordinate
+names are `x0`, `y0`, `x1`, and `y1`.
+
+`max_points` applies to profile lines. Sampling keeps endpoints, gaps and
+local extrema, with matching hover values. A line with many separate runs
+can exceed its point budget to preserve gaps. With `lazy_tabs=True`, an
+inactive tab's plots mount on first open. Its data is included in the HTML
+so the report works offline.
 
 ## Export and native customization
 
@@ -77,6 +124,18 @@ plot.segments(mz, np.zeros_like(intensity), mz, intensity, label="Centroids")
 and `report.show()` opens a temporary file in the default browser and returns
 its path. Exports embed the backend's JavaScript by default. Use
 `resources="cdn"` for a smaller file that loads JavaScript over the network.
+
+In a trusted Jupyter notebook, put `report` in the last line of a cell to
+display it inline. For a host page, use `report.to_html_fragment()`. To embed
+several reports with the same backend version, include `report.html_resources()`
+once in the host and use `report.to_html_fragment(resources=None)` for each
+report.
+
+Use `plot.save_image("spectrum.png", scale=2)` to export a subplot and
+`grid.save_image("comparison.svg")` for a whole grid. See
+[installation](installation.md#static-image-export) for browser and exporter
+requirements. PNG scaling increases pixel resolution. In SVG exports, image
+and heatmap data remain raster content.
 
 `grid.to_native()` builds a fresh Bokeh `GridBox` or Plotly `Figure`.
 Use `grid.configure_native(callback)` to apply native customizations on every

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
 import sys
 from datetime import date, datetime, timezone
@@ -214,13 +215,14 @@ def test_export_and_native_callback(backend: str, tmp_path: Path, monkeypatch: p
     assert "Original chart customized" in first_html
     assert first_html.index("Intro section") < first_html.index("Original chart")
     assert "Empty tab" in first_html
+    assert re.search(r'id="(plotski-[a-f0-9]+)-panel-1" aria-labelledby="\1-tab-1" tabindex="0" hidden', first_html)
     if backend == "bokeh":
-        assert first_html.count("BokehJS library") == 1
+        assert first_html.count("BEGIN bokeh.min.js") == 1
+        assert "BEGIN bokeh-widgets.min.js" not in first_html
         assert "https://cdn.bokeh.org" in report.to_html(resources="cdn")
     else:
         assert first_html.count("* plotly.js v") == 1
         assert 'role="tablist"' in first_html
-        assert 'id="panel-1" aria-labelledby="tab-1" tabindex="0" hidden' in first_html
         assert "https://cdn.plot.ly/" in report.to_html(resources="cdn")
     panel.title = "Edited chart"
     grid.configure_native(None)
@@ -277,6 +279,123 @@ def test_native_data_does_not_alias_report_data(backend: str) -> None:
         repeated = again.data[0].y
     np.testing.assert_array_equal(rendered, [2, 4])
     assert not np.shares_memory(rendered, repeated)
+
+
+def test_profile_sampling_hover_and_log_axes(backend: str) -> None:
+    grid = Grid(2, 1, backend=backend)
+    x = np.arange(1, 101)
+    y = np.full(len(x), 2.0)
+    y[56] = 900
+    y[65:73] = 0
+    sample = grid.add_subplot(title="Sample", x_limits=(1, 100))
+    sample.configure_axis("x", scale="log", reverse=True, tick_format=".1e").configure_axis("y", scale="log")
+    sample.spectrum(x, y, max_points=16, hover_fields={"Peak ID": [f"<{i}>" for i in x]}, hover_formats={"x": ".2f"})
+    other = grid.add_subplot(title="Reference", x_label="time (ms)")
+    other.mobilogram([1, 2], [10, 20], centroid=True, mirror=True, hover_formats={"y1": ".1f"})
+    assert (sample.x_label, sample.y_label, other.x_label) == ("m/z", "Intensity", "time (ms)")
+    native = grid.to_native()
+    if backend == "bokeh":
+        first, second = [child[0] for child in native.children]
+        profile = first.renderers[0].data_source.data
+        rendered_x, rendered_y = profile["x"], profile["y"]
+        index = list(rendered_x).index(57)
+        assert profile["_plotski_hover_0"][index] == "57.00"
+        assert profile["_plotski_hover_2"][index] == "<57>"
+        assert (first.x_range.start, first.x_range.end) == (100, 1)
+        assert first.xaxis[0].formatter.format == "%.1e"
+        ref = second.renderers[0].data_source.data
+        assert ref["y1"].tolist() == [-10, -20]
+        assert ref["_plotski_hover_3"] == ["10.0", "20.0"]
+    else:
+        first, second = native.data
+        rendered_x, rendered_y = first.x, first.y
+        assert first.hovertext[list(rendered_x).index(57)] == "x: 57.00<br>y: 900.0<br>Peak ID: &lt;57&gt;"
+        assert native.layout.xaxis.type == "log"
+        assert native.layout.xaxis.range == (2, 0)
+        assert native.layout.xaxis.tickformat == ".1e"
+        assert list(second.y) == [0, -10, None, 0, -20, None]
+        assert "y1: 10.0" in second.hovertext[1]
+    assert len(rendered_x) <= 16
+    assert (rendered_x[0], rendered_x[-1]) == (1, 100)
+    assert 900 in rendered_y
+    assert np.isnan(rendered_y).any()
+    with pytest.raises(ValueError, match="logarithmic"):
+        sample.bar([1], [2])
+
+
+def test_signed_stacks_grouped_bars_and_errors(backend: str) -> None:
+    report = Figure(backend=backend)
+    grid = report.add_grid(1, 3, cell_width=300, cell_height=240)
+    stack = grid.add_subplot()
+    stack.bars(["A", "B"], {"First": [3, -4], "Second": [7, -9]}, mode="stacked", y_error={"Second": (1, 2)})
+    grouped = grid.add_subplot()
+    grouped.bars(["A", "B"], {"First": [3, -4], "Second": [7, -9]})
+    scatter = grid.add_subplot()
+    scatter.scatter(["A"], [10], y_error=([2], [3]))
+    grid.link_axes(stack, scatter, x=False, y=True)
+    native = grid.to_native()
+    if backend == "bokeh":
+        signed, groups, points = [child[0] for child in native.children]
+        assert signed.width == 300 and signed.height == 240
+        assert (signed.y_range.start, signed.y_range.end) == (-14, 13)
+        assert signed.renderers[1].data_source.data["base"].tolist() == [3, -4]
+        assert signed.renderers[1].data_source.data["top"].tolist() == [10, -13]
+        assert groups.renderers[0].data_source.data["center"] == [("A", -0.2), ("B", -0.2)]
+        assert groups.renderers[1].data_source.data["center"] == [("A", 0.2), ("B", 0.2)]
+        assert points.renderers[0].data_source.data["error_low"].tolist() == [8]
+        assert points.renderers[0].data_source.data["error_high"].tolist() == [13]
+    else:
+        assert native.layout.width == 900 and native.layout.height == 240
+        assert native.layout.yaxis.range == (-14, 13)
+        assert native.data[1].base.tolist() == [3, -4]
+        assert native.data[2].offset == -0.4 and native.data[3].offset == 0
+        assert native.data[4].error_y.arrayminus.tolist() == [2]
+        assert native.data[4].error_y.array.tolist() == [3]
+    with pytest.raises(ValueError, match="same length"):
+        grouped.bars(["A", "B"], {"Good": [1, 2], "Bad": [1]})
+    assert len(grouped._layers) == 2
+
+
+def test_report_fragments_and_content_order(backend: str) -> None:
+    report = Figure(backend=backend, title="Review <A>", lazy_tabs=True)
+    report.add_text("Report introduction", kind="heading")
+    first = report.add_subplot(title="Main plot").line([1, 2], [3, 4], hover_fields={"ID": ["</script>", "x"]})
+    report.add_text("After the plot", kind="caption")
+    tab = report.add_tab("Peaks & matches")
+    tab.add_table({"Peak": ["<unassigned>"], "Area": [12]}, title="Peak summary")
+    other = tab.add_subplot(title="Second panel").line([2, 9], [0, 1])
+    report.link_axes(first, other)
+    fragment = report.to_html_fragment(resources=None)
+    assert "<html" not in fragment and "https://cdn." not in fragment
+    assert 'data-lazy-tabs="true"' in fragment
+    assert fragment.index("Report introduction") < fragment.index("Main plot") < fragment.index("After the plot")
+    assert fragment.index("Peak summary") < fragment.index("Second panel")
+    assert "&lt;unassigned&gt;" in fragment
+    assert "Peaks &amp; matches" in fragment
+    assert '"axes":{' in fragment
+    assert fragment.count('type="application/json"') == 2
+    assert re.search(r'<main class="plotski-report" id="([^"]+)"', fragment)[1] not in report.to_html_fragment(
+        resources=None
+    )
+    assert 'sandbox="allow-scripts"' in report._repr_html_()
+    with pytest.raises(ValueError, match="numeric or date"):
+        report.link_axes(tab.add_subplot().line(["A"], [1]), tab.add_subplot().line(["A"], [2]))
+    with pytest.raises(ValueError, match="scales and directions"):
+        report.link_axes(first, tab.add_subplot().configure_axis("x", reverse=True))
+    assert "Second panel" in report.to_html_fragment(resources=None)
+
+
+def test_image_export_validates_format_and_optional_dependencies(backend: str, tmp_path: Path, monkeypatch) -> None:
+    grid = Grid(1, 1, backend=backend)
+    panel = grid.add_subplot().line([1, 2], [3, 4])
+    with pytest.raises(ValueError, match=r"png or \.svg"):
+        grid.save_image(tmp_path / "figure.pdf")
+    with pytest.raises(ValueError, match="only to PNG"):
+        panel.save_image(tmp_path / "panel.svg", scale=2)
+    monkeypatch.setattr("plotski._image_export.find_spec", lambda name: None)
+    with pytest.raises(ImportError, match=rf"\[{backend}-export\]"):
+        panel.save_image(tmp_path / "panel.png")
+    assert not (tmp_path / "panel.png").exists()
 
 
 def test_plotly_is_optional() -> None:

@@ -7,26 +7,24 @@ from itertools import chain
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
-from bokeh.embed import file_html
-from bokeh.layouts import column
 from bokeh.models import (
     ColumnDataSource,
+    CustomJS,
     DataRange1d,
     FactorRange,
     GridBox,
     HoverTool,
     LinearColorMapper,
+    PrintfTickFormatter,
     Range,
     Range1d,
     Spacer,
-    TabPanel,
-    Tabs,
+    TapTool,
 )
 from bokeh.plotting import figure
-from bokeh.resources import CDN, INLINE
 
 from plotski._plot_data import Layer
-from plotski.figure import Figure, Resources, _cells, _GridAxes, _Placement
+from plotski.figure import _cells, _GridAxes, _Placement
 from plotski.subplot import Subplot, _Axis
 
 if TYPE_CHECKING:
@@ -45,11 +43,11 @@ _GAP = 12
 
 def _range(axis: _Axis) -> Range:
     if axis.kind == "category":
-        return FactorRange(factors=list(axis.categories))
+        return FactorRange(factors=list(reversed(axis.categories) if axis.reverse else axis.categories))
     if axis.limits is not None:
         start, end = axis.limits
         return Range1d(start=_timestamp(start), end=_timestamp(end))
-    return DataRange1d()
+    return DataRange1d(flipped=axis.reverse)
 
 
 def _timestamp(value: float | datetime) -> float:
@@ -69,12 +67,21 @@ def _layer(plot: figure, layer: Layer, legend: bool, hover: bool) -> None:
     named = {"legend_label": layer.label} if legend and layer.label else {}
     renderer: GlyphRenderer
     tips = [("x", "@x"), ("y", "@y")]
+    error_center = None
 
     match layer.kind:
         case "line":
             renderer = plot.line("x", "y", source={"x": d["x"], "y": d["y"]}, line_width=d["width"], **style, **named)
         case "scatter":
-            renderer = plot.scatter("x", "y", source={"x": d["x"], "y": d["y"]}, size=d["size"], **style, **named)
+            source = {"x": d["x"], "y": d["y"]}
+            options: dict[str, Any] = {}
+            if d["selection_group"] is not None:
+                source["_plotski_id"] = list(d["ids"])
+                options = {"nonselection_alpha": 0.25, "selection_line_color": "#172b4d", "selection_line_width": 2}
+            renderer = plot.scatter("x", "y", source=source, size=d["size"], **style, **named, **options)
+            if d["selection_group"] is not None:
+                renderer.tags.append({"plotski_selection": d["selection_group"]})
+            error_center = d["y"]
         case "segments":
             source = {key: d[key] for key in ("x0", "x1", "y0", "y1")}
             renderer = plot.segment("x0", "y0", "x1", "y1", source=source, line_width=d["width"], **style, **named)
@@ -82,10 +89,24 @@ def _layer(plot: figure, layer: Layer, legend: bool, hover: bool) -> None:
         case "bar":
             width = d["width"]
             source = {"x": d["x"], "y": d["y"]}
+            if d.get("offset"):
+                source["center"] = [(category, d["offset"]) for category in d["x"]]
+            if "base" in d:
+                source.update(base=d["base"], top=d["top"])
             if np.ndim(width):
                 source["width"] = width
                 width = "width"
-            renderer = plot.vbar(x="x", top="y", width=width, source=source, line_color=None, **style, **named)
+            renderer = plot.vbar(
+                x="center" if "center" in source else "x",
+                top="top" if "top" in source else "y",
+                bottom="base" if "base" in source else 0,
+                width=width,
+                source=source,
+                line_color=None,
+                **style,
+                **named,
+            )
+            error_center = d.get("top", d["y"])
         case "area":
             renderer = plot.varea(x="x", y1="lower", y2="upper", source=d, fill_color=color, fill_alpha=alpha, **named)
             tips = [("x", "@x"), ("lower", "@lower"), ("upper", "@upper")]
@@ -146,7 +167,20 @@ def _layer(plot: figure, layer: Layer, legend: bool, hover: bool) -> None:
         case _:
             raise ValueError(f"unsupported layer: {layer.kind}")
 
+    if error_center is not None and (errors := d.get("errors")) is not None:
+        source = renderer.data_source
+        source.data.update(error_low=error_center - errors[0], error_high=error_center + errors[1])
+        x = "center" if "center" in source.data else "x"
+        plot.segment(x, "error_low", x, "error_high", source=source, **style, **named)
+        for endpoint in ("error_low", "error_high"):
+            plot.scatter(x, endpoint, source=source, marker="dash", size=8, **style, **named)
     if hover and layer.hover:
+        if columns := d.get("hover_columns"):
+            tips = []
+            for index, (name, column) in enumerate(columns.items()):
+                field = f"_plotski_hover_{index}"
+                renderer.data_source.data[field] = column
+                tips.append((name, f"@{field}"))
         plot.add_tools(HoverTool(renderers=[renderer], tooltips=tips))
 
 
@@ -172,33 +206,74 @@ def _image(
     return renderer, tips
 
 
-def _build_subplot(placement: _Placement, ranges: tuple[Range, Range], axes: tuple[_Axis, _Axis]) -> figure:
+def _build_subplot(
+    placement: _Placement, ranges: tuple[Range, Range], axes: tuple[_Axis, _Axis], cell_width: int, cell_height: int
+) -> figure:
     subplot = placement.subplot
     options: dict[str, Any] = {
-        "x_axis_type": "datetime" if axes[0].kind == "datetime" else "auto",
-        "y_axis_type": "datetime" if axes[1].kind == "datetime" else "auto",
+        "x_axis_type": "datetime" if axes[0].kind == "datetime" else ("log" if axes[0].scale == "log" else "auto"),
+        "y_axis_type": "datetime" if axes[1].kind == "datetime" else ("log" if axes[1].scale == "log" else "auto"),
         "tools": "pan,wheel_zoom,box_zoom,reset,save",
     }
     plot = figure(
         title=subplot.title or None,
-        width=_CELL_WIDTH * placement.colspan + _GAP * (placement.colspan - 1),
-        height=_CELL_HEIGHT * placement.rowspan + _GAP * (placement.rowspan - 1),
+        width=cell_width * placement.colspan + _GAP * (placement.colspan - 1),
+        height=cell_height * placement.rowspan + _GAP * (placement.rowspan - 1),
         x_range=ranges[0],
         y_range=ranges[1],
         **options,
     )
     plot.xaxis.axis_label = subplot.x_label
     plot.yaxis.axis_label = subplot.y_label
-    for layer in subplot._layers:
+    for axis, settings in zip((plot.xaxis, plot.yaxis), subplot._axis_settings, strict=True):
+        if settings.tick_format is not None:
+            axis.formatter = PrintfTickFormatter(format=f"%{settings.tick_format}")
+    for layer in subplot._render_layers():
         _layer(plot, layer, subplot.legend, subplot.hover)
+    selectable = [
+        renderer
+        for renderer in plot.renderers
+        if any(isinstance(tag, dict) and "plotski_selection" in tag for tag in renderer.tags)
+    ]
+    if selectable:
+        tap = TapTool(
+            renderers=selectable,
+            mode="replace",
+            tags=["plotski_selection"],
+            callback=CustomJS(
+                code="""
+            const targetId = cb_obj.tags.find(tag => tag.plotski_target)?.plotski_target;
+            if (targetId === undefined) return;
+            const target = document.getElementById(targetId);
+            const source = cb_data.source;
+            const index = source.inspected.indices[0];
+            if (target && index !== undefined) {
+                target.dispatchEvent(new CustomEvent("plotski-bokeh-select", {bubbles: true, detail: {
+                    source: source.id, index,
+                }}));
+            }
+        """
+            ),
+        )
+        plot.add_tools(tap)
+        plot.toolbar.active_tap = tap
     for legend in plot.legend:
         legend.click_policy = "hide"
     return plot
 
 
-def render_grid(rows: int, cols: int, placements: list[_Placement], state: _GridAxes) -> GridBox:
+def render_grid(
+    rows: int,
+    cols: int,
+    placements: list[_Placement],
+    state: _GridAxes,
+    *,
+    cell_width: int | None = None,
+    cell_height: int | None = None,
+) -> GridBox:
     """Build a Bokeh grid with positioned panels and shared ranges."""
     ranges: dict[int, Range] = {}
+    cell_width, cell_height = cell_width or _CELL_WIDTH, cell_height or _CELL_HEIGHT
 
     def get_range(axis: _Axis) -> Range:
         key = id(axis)
@@ -211,7 +286,7 @@ def render_grid(rows: int, cols: int, placements: list[_Placement], state: _Grid
     occupied: set[tuple[int, int]] = set()
     for placement in placements:
         axes = state.axes[placement.subplot]
-        plot = _build_subplot(placement, (get_range(axes[0]), get_range(axes[1])), axes)
+        plot = _build_subplot(placement, (get_range(axes[0]), get_range(axes[1])), axes, cell_width, cell_height)
         plots[placement.subplot] = plot
         children.append((plot, placement.row, placement.col, placement.rowspan, placement.colspan))
         occupied.update(_cells(placement.row, placement.col, placement.rowspan, placement.colspan))
@@ -224,18 +299,6 @@ def render_grid(rows: int, cols: int, placements: list[_Placement], state: _Grid
                 shared_range.renderers = list(chain.from_iterable(plots[subplot].renderers for subplot in group))
 
     for row, col in sorted(_cells(0, 0, rows, cols) - occupied):
-        children.append((Spacer(width=_CELL_WIDTH, height=_CELL_HEIGHT), row, col))
+        children.append((Spacer(width=cell_width, height=cell_height), row, col))
     options: dict[str, Any] = {"spacing": _GAP}
     return GridBox(children=children, **options)
-
-
-def render_html(report: Figure, resources: Resources) -> str:
-    """Serialize a Bokeh report and its resources once."""
-    children = [grid.to_native() for grid in report._grids]
-    if report._tabs:
-        tabs = [
-            TabPanel(title=tab.title, child=column(*(grid.to_native() for grid in tab._grids))) for tab in report._tabs
-        ]
-        children.append(Tabs(tabs=tabs))
-    layout = column(*children)
-    return file_html(layout, INLINE if resources == "inline" else CDN, title=report.title)

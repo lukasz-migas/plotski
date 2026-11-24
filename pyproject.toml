@@ -56,6 +56,14 @@ dependencies = [
 plotly = [
     "plotly>=6",
 ]
+bokeh-export = [
+    "bokeh>=3.8",
+    "selenium>=4",
+]
+plotly-export = [
+    "plotly>=6.1.1",
+    "kaleido>=1",
+]
 test = [
     "pytest>=6.0",
     "pytest-cov",
@@ -83,6 +91,9 @@ repository = "https://github.com/lukasz-migas/plotski"
 # https://peps.python.org/pep-0621/#entry-points
 # [project.entry-points."spam.magical"]
 # tomatoes = "spam:main_tomatoes"
+
+[tool.setuptools.package-data]
+plotski = ["_report.js"]
 
 [tool.ruff]
 line-length = 120

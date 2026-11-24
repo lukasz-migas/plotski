@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timezone
 from typing import Any, Literal, TypeAlias
@@ -15,6 +15,9 @@ from plotski.utilities import get_colormap
 
 AxisValue: TypeAlias = float | date | np.datetime64
 Coordinates: TypeAlias = ArrayLike | Sequence[AxisValue | None]
+HoverFields: TypeAlias = Mapping[str, Sequence[Any] | NDArray]
+HoverFormats: TypeAlias = Mapping[str, str]
+Errors: TypeAlias = tuple[ArrayLike, ArrayLike]
 Limits: TypeAlias = tuple[AxisValue, AxisValue]
 NativeLimits: TypeAlias = tuple[float | datetime, float | datetime]
 AxisKind = Literal["linear", "datetime", "category"]
@@ -77,6 +80,94 @@ def equal_lengths(**vectors: NDArray) -> None:
     """Validate that paired coordinates have the same length."""
     if len({len(array) for array in vectors.values()}) > 1:
         raise ValueError(f"{', '.join(vectors)} must have the same length")
+
+
+def hover_columns(
+    coordinates: dict[str, NDArray], fields: HoverFields | None, formats: HoverFormats | None
+) -> dict[str, list[str]]:
+    """Prepare display values with identical formatting on both backends."""
+    if fields is None and formats is None:
+        return {}
+    columns = dict(coordinates)
+    size = len(next(iter(columns.values())))
+    for name, values in (fields or {}).items():
+        if not isinstance(name, str) or not name or name in columns:
+            raise ValueError("hover field names must be nonempty and distinct from coordinates")
+        array = np.asarray(values, dtype=object)
+        if array.ndim != 1 or len(array) != size:
+            raise ValueError(f"hover field {name!r} must have the same length as the coordinates")
+        columns[name] = array
+    formats = formats or {}
+    if formats.keys() - columns.keys():
+        raise ValueError("hover formats must refer to coordinates or hover fields")
+
+    def display(value: Any, spec: str) -> str:
+        if isinstance(value, (np.datetime64, np.generic)):
+            value = value.item()
+        if value is None or (isinstance(value, float) and not np.isfinite(value)):
+            return ""
+        try:
+            return format(value, spec)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"invalid hover format {spec!r} for {value!r}") from exc
+
+    return {name: [display(value, formats.get(name, "")) for value in column] for name, column in columns.items()}
+
+
+def selection_ids(size: int, ids: Sequence[str] | NDArray | None, group: str | None) -> tuple[str, ...] | None:
+    """Validate optional row identities used for linked selection."""
+    if ids is None and group is None:
+        return None
+    if not isinstance(group, str) or not group.strip() or ids is None or isinstance(ids, str):
+        raise ValueError("ids and a nonempty selection_group are required together")
+    array = np.asarray(ids, dtype=object)
+    if array.ndim != 1 or len(array) != size or not all(isinstance(value, str) and value for value in array):
+        raise ValueError("ids must contain one nonempty string per row")
+    return tuple(array)
+
+
+def error_deltas(y: NDArray, errors: Errors | None) -> tuple[NDArray, NDArray] | None:
+    """Return finite, nonnegative error deltas for each numeric data point."""
+    if errors is None:
+        return None
+    if axis_kind(y) != "linear" or len(errors) != 2:
+        raise ValueError("y_error requires numeric y coordinates and a pair of deltas")
+    lower, upper = (
+        np.full(len(y), float(value)) if np.ndim(value) == 0 else vector(value, "y_error", numeric=True)
+        for value in errors
+    )
+    equal_lengths(y=y, lower=lower, upper=upper)
+    if any(np.any(~np.isfinite(delta) | (delta < 0)) for delta in (lower, upper)):
+        raise ValueError("y_error deltas must be finite and nonnegative")
+    return lower, upper
+
+
+def profile_indices(x: NDArray, y: NDArray, max_points: int) -> NDArray:
+    """Keep line endpoints, gap separators, and local extrema in source order."""
+    finite = np.isfinite(x) & np.isfinite(y)
+    boundaries = np.flatnonzero(np.diff(finite)) + 1
+    runs = np.split(np.arange(len(y)), boundaries)
+    valid_runs = [run for run in runs if finite[run[0]]]
+    keep = {int(run[0]) for run in runs}
+    keep.add(len(y) - 1)
+    keep.update(int(run[-1]) for run in valid_runs)
+    for column in (x, y):
+        valid = np.flatnonzero(np.isfinite(column))
+        if len(valid):
+            keep.update((int(valid[column[valid].argmin()]), int(valid[column[valid].argmax()])))
+    # Allocate the remaining pairs among runs in proportion to their interiors.
+    interior = np.array([max(0, len(run) - 2) for run in valid_runs])
+    bucket_count = max(0, (max_points - len(keep)) // 2)
+    total = int(interior.sum())
+    if total and bucket_count:
+        allocated = np.diff(np.r_[0, np.cumsum(interior) * bucket_count // total])
+        for run, count in zip(valid_runs, allocated, strict=True):
+            if not count:
+                continue
+            for bucket in np.array_split(run[1:-1], min(count, len(run) - 2)):
+                values = y[bucket]
+                keep.update((int(bucket[values.argmin()]), int(bucket[values.argmax()])))
+    return np.asarray(sorted(keep), dtype=np.intp)
 
 
 def axis_kind(array: NDArray) -> AxisKind:

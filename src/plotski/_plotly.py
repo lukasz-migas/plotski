@@ -3,52 +3,16 @@
 from __future__ import annotations
 
 from html import escape
+from math import log10
 from typing import Any
 
 import numpy as np
 from plotly import graph_objects as go
-from plotly.io import to_html
-from plotly.offline import get_plotlyjs, get_plotlyjs_version
 from plotly.subplots import make_subplots
 
 from plotski._plot_data import Layer
-from plotski.figure import Figure, Grid, Resources, _GridAxes, _Placement
+from plotski.figure import _GridAxes, _Placement
 from plotski.subplot import _Axis
-
-_TAB_SCRIPT = """
-const tablist = document.querySelector("[role=tablist]");
-const tabs = Array.from(tablist.querySelectorAll("[role=tab]"));
-function selectTab(tab, focus) {
-    tabs.forEach(button => {
-        const selected = button === tab;
-        button.setAttribute("aria-selected", selected);
-        button.tabIndex = selected ? 0 : -1;
-        document.getElementById(button.getAttribute("aria-controls")).hidden = !selected;
-    });
-    if (focus) tab.focus();
-    const panel = document.getElementById(tab.getAttribute("aria-controls"));
-    requestAnimationFrame(() => {
-        if (panel.hidden) return;
-        panel.querySelectorAll(".plotly-graph-div").forEach(plot => {
-            if (plot._fullLayout) Plotly.Plots.resize(plot).catch(() => {});
-        });
-    });
-}
-tabs.forEach(tab => tab.addEventListener("click", () => selectTab(tab, false)));
-tablist.addEventListener("keydown", event => {
-    const index = tabs.indexOf(event.target);
-    if (index < 0) return;
-    const next = {
-        ArrowRight: (index + 1) % tabs.length,
-        ArrowLeft: (index + tabs.length - 1) % tabs.length,
-        Home: 0,
-        End: tabs.length - 1
-    }[event.key];
-    if (next === undefined) return;
-    event.preventDefault();
-    selectTab(tabs[next], true);
-});
-"""
 
 
 def _axis_reference(figure: go.Figure, placement: _Placement, index: int) -> str:
@@ -57,17 +21,29 @@ def _axis_reference(figure: go.Figure, placement: _Placement, index: int) -> str
     return axis.plotly_name.replace("axis", "")
 
 
-def _axis_options(axis: _Axis, label: str) -> dict[str, Any]:
+def _axis_options(axis: _Axis, label: str, tick_format: str | None) -> dict[str, Any]:
     options: dict[str, Any] = {
         "title_text": escape(label),
-        "type": {"datetime": "date", "category": "category"}.get(axis.kind or "linear", "linear"),
+        "type": {"datetime": "date", "category": "category"}.get(axis.kind or "linear", axis.scale),
         "autorange": axis.limits is None,
     }
     if axis.limits is not None:
-        options["range"] = axis.limits
+        options["range"] = tuple(map(log10, axis.limits)) if axis.scale == "log" else axis.limits
+    elif axis.reverse and axis.kind != "category":
+        options["autorange"] = "reversed"
     if axis.kind == "category":
-        options.update(categoryorder="array", categoryarray=axis.categories, showgrid=False)
+        categories = axis.categories[::-1] if axis.reverse else axis.categories
+        options.update(categoryorder="array", categoryarray=categories, showgrid=False)
+    if tick_format is not None:
+        options["tickformat"] = tick_format
     return options
+
+
+def _error_y(layer: Layer) -> dict[str, Any] | None:
+    if (errors := layer.data.get("errors")) is None:
+        return None
+    lower, upper = errors
+    return {"type": "data", "symmetric": False, "array": upper, "arrayminus": lower, "color": layer.color}
 
 
 def _layer(figure: go.Figure, layer: Layer, placement: _Placement, series: int) -> None:
@@ -86,8 +62,24 @@ def _layer(figure: go.Figure, layer: Layer, placement: _Placement, series: int) 
     if layer.kind == "line":
         trace = go.Scatter(x=d["x"], y=d["y"], mode="lines", line={"color": color, "width": d["width"]}, **trace_style)
     elif layer.kind == "scatter":
+        selection: dict[str, Any] = {}
+        if d["selection_group"] is not None:
+            selection = {
+                "ids": d["ids"],
+                "meta": {"plotski_selection": d["selection_group"]},
+                "selected": {"marker": {"size": d["size"] + 3}},
+                "unselected": {"marker": {"opacity": 0.25}},
+            }
+            if not hover:
+                trace_style["hoverinfo"] = "none"
         trace = go.Scatter(
-            x=d["x"], y=d["y"], mode="markers", marker={"color": color, "size": d["size"]}, **trace_style
+            x=d["x"],
+            y=d["y"],
+            mode="markers",
+            marker={"color": color, "size": d["size"]},
+            error_y=_error_y(layer),
+            **trace_style,
+            **selection,
         )
     elif layer.kind == "segments":
         x = [
@@ -102,7 +94,18 @@ def _layer(figure: go.Figure, layer: Layer, placement: _Placement, series: int) 
         ]
         trace = go.Scatter(x=x, y=y, mode="lines", line={"color": color, "width": d["width"]}, **trace_style)
     elif layer.kind == "bar":
-        trace = go.Bar(x=d["x"], y=d["y"], width=d["width"], marker_color=color, **trace_style)
+        offset = d["offset"] - d["width"] / 2 if d.get("offset") else None
+        base = d.get("base")
+        trace = go.Bar(
+            x=d["x"],
+            y=d["y"],
+            width=d["width"],
+            marker_color=color,
+            offset=offset,
+            error_y=_error_y(layer),
+            base=base if base is not None and np.any(base) else None,
+            **trace_style,
+        )
     elif layer.kind == "boxplot":
         # Whiskers and outliers come from the same precomputed statistics as Bokeh.
         group = trace_style["legendgroup"]
@@ -206,6 +209,14 @@ def _layer(figure: go.Figure, layer: Layer, placement: _Placement, series: int) 
         )
     else:
         raise ValueError(f"unsupported layer: {layer.kind}")
+    if hover and (columns := d.get("hover_columns")):
+        tips = [
+            "<br>".join(f"{escape(name)}: {escape(value)}" for name, value in zip(columns, row, strict=True))
+            for row in zip(*columns.values(), strict=True)
+        ]
+        if layer.kind == "segments":
+            tips = [value for tip in tips for value in (tip, tip, "")]
+        trace.update(hovertext=tips, hovertemplate="%{hovertext}<extra>%{fullData.name}</extra>")
     figure.add_trace(trace, **where)
 
 
@@ -243,13 +254,21 @@ def _image(layer: Layer, hover: bool) -> go.Heatmap | go.Image:
     )
 
 
-def render_grid(rows: int, cols: int, placements: list[_Placement], state: _GridAxes) -> go.Figure:
+def render_grid(
+    rows: int,
+    cols: int,
+    placements: list[_Placement],
+    state: _GridAxes,
+    *,
+    cell_width: int | None = None,
+    cell_height: int | None = None,
+) -> go.Figure:
     """Build a native Plotly figure with Cartesian subplot cells and matched axes."""
-    height = 320 * rows + 55
+    height = (cell_height or 320) * rows + (55 if cell_height is None else 0)
+    width = cell_width * cols if cell_width is not None else None
+    dimensions = {"width": width, "height": height, "autosize": width is None}
     if not placements:
-        return go.Figure(
-            layout={"height": height, "autosize": True, "xaxis": {"visible": False}, "yaxis": {"visible": False}}
-        )
+        return go.Figure(layout={**dimensions, "xaxis": {"visible": False}, "yaxis": {"visible": False}})
     specs: list[list[dict[str, int] | None]] = [[None for _ in range(cols)] for _ in range(rows)]
     for placement in placements:
         specs[placement.row][placement.col] = {"rowspan": placement.rowspan, "colspan": placement.colspan}
@@ -258,19 +277,21 @@ def render_grid(rows: int, cols: int, placements: list[_Placement], state: _Grid
         cols=cols,
         specs=specs,
         subplot_titles=[escape(placement.subplot.title) for placement in placements],
-        vertical_spacing=65 / height,
-        horizontal_spacing=70 / (440 * cols),
+        vertical_spacing=min(65 / height, 0.5 / rows),
+        horizontal_spacing=min(70 / (width or 440 * cols), 0.5 / cols),
     )
-    fig.update_layout(height=height, autosize=True, barmode="overlay", margin={"t": 55, "b": 45, "l": 65, "r": 45})
+    fig.update_layout(**dimensions, barmode="overlay", margin={"t": 55, "b": 45, "l": 65, "r": 45})
     by_subplot = {placement.subplot: placement for placement in placements}
     for placement in placements:
         subplot = placement.subplot
         axes = state.axes[subplot]
         where = {"row": placement.row + 1, "col": placement.col + 1}
-        fig.update_xaxes(**_axis_options(axes[0], subplot.x_label), **where)
+        fig.update_xaxes(**_axis_options(axes[0], subplot.x_label, subplot._axis_settings[0].tick_format), **where)
         # Image traces default to a reversed, scale-anchored y axis. The shared extent uses increasing y.
-        fig.update_yaxes(**_axis_options(axes[1], subplot.y_label), scaleanchor=False, **where)
-        for index, layer in enumerate(subplot._layers):
+        fig.update_yaxes(
+            **_axis_options(axes[1], subplot.y_label, subplot._axis_settings[1].tick_format), scaleanchor=False, **where
+        )
+        for index, layer in enumerate(subplot._render_layers()):
             _layer(fig, layer, placement, index)
     for index, groups in enumerate(state.links):
         update = fig.update_xaxes if index == 0 else fig.update_yaxes
@@ -280,59 +301,3 @@ def render_grid(rows: int, cols: int, placements: list[_Placement], state: _Grid
                 placement = by_subplot[subplot]
                 update(matches=reference, row=placement.row + 1, col=placement.col + 1)
     return fig
-
-
-def render_html(report: Figure, resources: Resources) -> str:
-    """Serialize all grids with one copy of Plotly.js and optional interactive tabs."""
-    if resources == "inline":
-        library = "<script>" + get_plotlyjs() + "</script>"
-    else:
-        library = f'<script src="https://cdn.plot.ly/plotly-{get_plotlyjs_version()}.min.js"></script>'
-
-    def render_page(grids: list[Grid]) -> str:
-        return "".join(
-            '<div class="grid" style="min-width:'
-            + str(230 * grid.cols)
-            + 'px">'
-            + to_html(grid.to_native(), full_html=False, include_plotlyjs=False, config={"responsive": True})
-            + "</div>"
-            for grid in grids
-        )
-
-    title = escape(report.title)
-    content = render_page(report._grids)
-    if report._tabs:
-        buttons, panels = [], []
-        for index, tab in enumerate(report._tabs):
-            selected = "true" if index == 0 else "false"
-            tabindex = 0 if index == 0 else -1
-            hidden = "" if index == 0 else " hidden"
-            buttons.append(
-                f'<button type="button" role="tab" id="tab-{index}" aria-controls="panel-{index}" '
-                f'aria-selected="{selected}" tabindex="{tabindex}">{escape(tab.title)}</button>'
-            )
-            panels.append(
-                f'<section role="tabpanel" id="panel-{index}" aria-labelledby="tab-{index}" tabindex="0"{hidden}>'
-                f"{render_page(tab._grids)}</section>"
-            )
-        content += '<div role="tablist" aria-label="Report tabs">' + "".join(buttons) + "</div>" + "".join(panels)
-        content += f"<script>{_TAB_SCRIPT}</script>"
-
-    return f"""<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{title}</title>
-<style>
-body {{ font-family: system-ui, sans-serif; margin: 1rem; }}
-.grid {{ margin-block: 0.75rem; }}
-[role=tablist] {{ display: flex; flex-wrap: wrap; gap: 0.35rem; border-bottom: 1px solid #aaa; }}
-[role=tab] {{ font: inherit; padding: 0.5rem 0.85rem; background: white; border: 1px solid transparent; cursor: pointer; }}
-[role=tab][aria-selected=true] {{ color: #174a8b; border-bottom-color: currentColor; font-weight: 600; }}
-</style>
-{library}
-</head>
-<body><main>{content}</main></body>
-</html>
-"""

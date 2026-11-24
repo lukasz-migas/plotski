@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 import webbrowser
-from collections.abc import Callable
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, replace
+from html import escape
 from numbers import Integral
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import TYPE_CHECKING, Any, Literal, TypeAlias
 
-from plotski._plot_data import Limits
+from numpy import ndarray
+
+from plotski._plot_data import Limits, selection_ids
 from plotski.subplot import Subplot, _Axis, _merge_axes
 
 if TYPE_CHECKING:
@@ -60,17 +63,68 @@ class _GridAxes:
     links: tuple[list[tuple[Subplot, ...]], list[tuple[Subplot, ...]]]
 
 
+_AxisLinks: TypeAlias = tuple[list[set[Subplot]], list[set[Subplot]]]
+
+
+def _join_group(groups: list[set[Subplot]], members: set[Subplot]) -> None:
+    overlapping = [group for group in groups if group & members]
+    merged = members.union(*overlapping)
+    groups[:] = [group for group in groups if group not in overlapping]
+    groups.append(merged)
+
+
+def _add_axis_links(
+    links: _AxisLinks, subplots: set[Subplot], members: tuple[Subplot, ...], x: bool, y: bool
+) -> _AxisLinks:
+    if not x and not y:
+        raise ValueError("select at least one axis to link")
+    unique = set(members)
+    if len(unique) < 2 or len(unique) != len(members):
+        raise ValueError("linking requires at least two distinct subplots")
+    if not unique <= subplots:
+        raise ValueError("all linked subplots must belong to this grid or figure")
+    pending = (links[0].copy(), links[1].copy())
+    for index, enabled in enumerate((x, y)):
+        if enabled:
+            _join_group(pending[index], unique)
+    return pending
+
+
+def _resolve_axes(subplots: list[Subplot], groups: _AxisLinks) -> _GridAxes:
+    axes = {subplot: (subplot._axis(0), subplot._axis(1)) for subplot in subplots}
+    links: tuple[list[tuple[Subplot, ...]], list[tuple[Subplot, ...]]] = ([], [])
+    for index, dimension in enumerate(groups):
+        for group in dimension:
+            ordered = tuple(subplot for subplot in subplots if subplot in group)
+            shared = _merge_axes([axes[subplot][index] for subplot in ordered], linked=True)
+            links[index].append(ordered)
+            for subplot in ordered:
+                pair = axes[subplot]
+                axes[subplot] = (shared, pair[1]) if index == 0 else (pair[0], shared)
+    return _GridAxes(axes, links)
+
+
 class Grid:
     """A fixed-size grid of subplots with optional spans and linked axes."""
 
-    def __init__(self, rows: int, cols: int, *, backend: Backend = "bokeh") -> None:
+    def __init__(
+        self,
+        rows: int,
+        cols: int,
+        *,
+        backend: Backend = "bokeh",
+        cell_width: int | None = None,
+        cell_height: int | None = None,
+    ) -> None:
         _check_backend(backend)
         self._rows = _integer(rows, "rows", 1)
         self._cols = _integer(cols, "cols", 1)
         self._backend = backend
+        self._cell_width = _integer(cell_width, "cell_width", 10) if cell_width is not None else None
+        self._cell_height = _integer(cell_height, "cell_height", 10) if cell_height is not None else None
         self._placements: dict[tuple[int, int], _Placement] = {}
         self._occupied: set[tuple[int, int]] = set()
-        self._links: tuple[list[set[Subplot]], list[set[Subplot]]] = ([], [])
+        self._links: _AxisLinks = ([], [])
         self._customize: Callable[[_NativeGrid], None] | None = None
 
     @property
@@ -135,27 +189,14 @@ class Grid:
     def _place(self, subplot: Subplot, row: int, col: int, rowspan: int, colspan: int) -> Subplot:
         self._placements[row, col] = _Placement(subplot, row, col, rowspan, colspan)
         self._occupied.update(_cells(row, col, rowspan, colspan))
+        subplot._grid = self
         return subplot
 
     def link_axes(self, *subplots: Subplot, x: bool = True, y: bool = False) -> Grid:
         """Share ranges among two or more subplots belonging to this grid."""
-        if not x and not y:
-            raise ValueError("select at least one axis to link")
-        members = set(subplots)
-        if len(members) < 2 or len(members) != len(subplots):
-            raise ValueError("linking requires at least two distinct subplots")
-        if not members <= {placement.subplot for placement in self._placements.values()}:
-            raise ValueError("all linked subplots must belong to this grid")
-
-        pending = (self._links[0].copy(), self._links[1].copy())
-        for i, enabled in enumerate((x, y)):
-            if enabled:
-                groups = pending[i]
-                overlaps = [group for group in groups if group & members]
-                merged = members.union(*overlaps)
-                _merge_axes([subplot._axis(i) for subplot in merged], linked=True)
-                groups[:] = [group for group in groups if group not in overlaps]
-                groups.append(merged)
+        members = [placement.subplot for placement in self._ordered_placements()]
+        pending = _add_axis_links(self._links, set(members), subplots, x, y)
+        _resolve_axes(members, pending)
         self._links = pending
         return self
 
@@ -164,57 +205,87 @@ class Grid:
         self._customize = callback
         return self
 
-    def _axes(self, placements: list[_Placement]) -> _GridAxes:
-        subplots = [placement.subplot for placement in placements]
-        axes = {subplot: (subplot._axis(0), subplot._axis(1)) for subplot in subplots}
-        links: tuple[list[tuple[Subplot, ...]], list[tuple[Subplot, ...]]] = ([], [])
-        for index, groups in enumerate(self._links):
-            for group in groups:
-                ordered = tuple(subplot for subplot in subplots if subplot in group)
-                shared = _merge_axes([axes[subplot][index] for subplot in ordered], linked=True)
-                links[index].append(ordered)
-                for subplot in ordered:
-                    pair = axes[subplot]
-                    axes[subplot] = (shared, pair[1]) if index == 0 else (pair[0], shared)
-        return _GridAxes(axes, links)
+    def _ordered_placements(self) -> list[_Placement]:
+        return [self._placements[key] for key in sorted(self._placements)]
 
     def to_native(self) -> _NativeGrid:
         """Build a fresh Bokeh GridBox or Plotly Figure and apply customization."""
-        placements = [self._placements[key] for key in sorted(self._placements)]
-        axes = self._axes(placements)
+        placements = self._ordered_placements()
+        axes = _resolve_axes([placement.subplot for placement in placements], self._links)
+        return self._render(placements, axes)
+
+    def _render(self, placements: list[_Placement], axes: _GridAxes) -> _NativeGrid:
         native: _NativeGrid
         if self.backend == "bokeh":
             from plotski._bokeh import render_grid as render_bokeh
 
-            native = render_bokeh(self.rows, self.cols, placements, axes)
+            native = render_bokeh(
+                self.rows, self.cols, placements, axes, cell_width=self._cell_width, cell_height=self._cell_height
+            )
         else:
             from plotski._plotly import render_grid as render_plotly
 
-            native = render_plotly(self.rows, self.cols, placements, axes)
+            native = render_plotly(
+                self.rows, self.cols, placements, axes, cell_width=self._cell_width, cell_height=self._cell_height
+            )
         if self._customize is not None:
             self._customize(native)
         return native
+
+    def save_image(self, path: str | Path, *, scale: float = 1) -> Path:
+        """Export the grid as PNG or SVG, inferring the format from the suffix."""
+        from plotski._image_export import save_image
+
+        return save_image(path, self.backend, self.to_native, scale)
+
+    def _save_subplot(self, subplot: Subplot, path: str | Path, scale: float) -> Path:
+        placement = next(item for item in self._placements.values() if item.subplot is subplot)
+        grid = Grid(
+            placement.rowspan,
+            placement.colspan,
+            backend=self.backend,
+            cell_width=self._cell_width,
+            cell_height=self._cell_height,
+        )
+        # Reuse the data and display settings without changing its original ownership.
+        grid._placements[0, 0] = replace(placement, row=0, col=0)
+        return grid.save_image(path, scale=scale)
 
 
 def _cells(row: int, col: int, rowspan: int, colspan: int) -> set[tuple[int, int]]:
     return {(i, j) for i in range(row, row + rowspan) for j in range(col, col + colspan)}
 
 
+@dataclass(frozen=True)
+class _ReportText:
+    text: str
+    kind: Literal["paragraph", "heading", "caption"]
+
+
+@dataclass(frozen=True)
+class _ReportTable:
+    title: str
+    columns: tuple[str, ...]
+    rows: tuple[tuple[str, ...], ...]
+    selection_group: str | None
+    ids: tuple[str, ...] | None
+
+
 class _Page:
     def __init__(self, backend: Backend) -> None:
         _check_backend(backend)
         self._backend = backend
-        self._grids: list[Grid] = []
+        self._blocks: list[Grid | _ReportText | _ReportTable] = []
 
     @property
     def backend(self) -> Backend:
         """Return the backend used throughout the report."""
         return self._backend
 
-    def add_grid(self, rows: int, cols: int) -> Grid:
+    def add_grid(self, rows: int, cols: int, *, cell_width: int | None = None, cell_height: int | None = None) -> Grid:
         """Append a fixed-size grid and return it for adding subplots."""
-        grid = Grid(rows, cols, backend=self.backend)
-        self._grids.append(grid)
+        grid = Grid(rows, cols, backend=self.backend, cell_width=cell_width, cell_height=cell_height)
+        self._blocks.append(grid)
         return grid
 
     def add_subplot(
@@ -227,9 +298,11 @@ class _Page:
         y_limits: Limits | None = None,
         legend: bool = True,
         hover: bool = True,
+        width: int | None = None,
+        height: int | None = None,
     ) -> Subplot:
         """Append a standalone subplot outside any explicit grid."""
-        grid = Grid(1, 1, backend=self.backend)
+        grid = Grid(1, 1, backend=self.backend, cell_width=width, cell_height=height)
         subplot = grid.add_subplot(
             title=title,
             x_label=x_label,
@@ -239,8 +312,36 @@ class _Page:
             legend=legend,
             hover=hover,
         )
-        self._grids.append(grid)
+        self._blocks.append(grid)
         return subplot
+
+    def add_text(self, text: str, *, kind: Literal["paragraph", "heading", "caption"] = "paragraph") -> None:
+        """Append plain text as a paragraph, heading, or plot caption."""
+        if kind not in ("paragraph", "heading", "caption"):
+            raise ValueError("text kind must be 'paragraph', 'heading', or 'caption'")
+        self._blocks.append(_ReportText(text, kind))
+
+    def add_table(
+        self,
+        columns: Mapping[str, Sequence[object] | ndarray],
+        *,
+        title: str = "",
+        selection_group: str | None = None,
+        ids: Sequence[str] | ndarray | None = None,
+    ) -> None:
+        """Append a table from named columns, optionally linking rows by ID."""
+        if not columns or any(not isinstance(name, str) or not name.strip() for name in columns):
+            raise ValueError("tables require nonempty column names")
+        if any(isinstance(column, (str, bytes)) for column in columns.values()):
+            raise ValueError("table columns must be sequences of cells")
+        if len({len(column) for column in columns.values()}) != 1:
+            raise ValueError("table columns must have the same length")
+        rows = tuple(
+            tuple("" if value is None else str(value) for value in row) for row in zip(*columns.values(), strict=True)
+        )
+        self._blocks.append(
+            _ReportTable(title, tuple(columns), rows, selection_group, selection_ids(len(rows), ids, selection_group))
+        )
 
 
 class Tab(_Page):
@@ -254,10 +355,12 @@ class Tab(_Page):
 class Figure(_Page):
     """An interactive HTML report using one rendering backend."""
 
-    def __init__(self, *, backend: Backend = "bokeh", title: str = "Plotski") -> None:
+    def __init__(self, *, backend: Backend = "bokeh", title: str = "Plotski", lazy_tabs: bool = False) -> None:
         super().__init__(backend)
         self.title = title
+        self.lazy_tabs = lazy_tabs
         self._tabs: list[Tab] = []
+        self._links: _AxisLinks = ([], [])
 
     def add_tab(self, title: str) -> Tab:
         """Append a named tab and return it for adding plots and grids."""
@@ -267,17 +370,89 @@ class Figure(_Page):
         self._tabs.append(tab)
         return tab
 
+    def _subplots(self) -> dict[Subplot, Grid]:
+        return {
+            placement.subplot: grid
+            for page in (self, *self._tabs)
+            for grid in page._blocks
+            if isinstance(grid, Grid)
+            for placement in grid._ordered_placements()
+        }
+
+    def link_axes(self, *subplots: Subplot, x: bool = True, y: bool = False) -> Figure:
+        """Synchronize numeric or date axes across grids and tabs in the report."""
+        owners = self._subplots()
+        pending = _add_axis_links(self._links, set(owners), subplots, x, y)
+        self._report_axes(owners, pending)
+        self._links = pending
+        return self
+
+    def _report_axes(
+        self, owners: dict[Subplot, Grid], report_links: _AxisLinks
+    ) -> tuple[dict[Grid, _GridAxes], dict[tuple[Subplot, int], str]]:
+        all_links: _AxisLinks = ([], [])
+        grids = dict.fromkeys(owners.values())
+        for index in range(2):
+            for grid in grids:
+                for members in grid._links[index]:
+                    _join_group(all_links[index], members)
+            for members in report_links[index]:
+                _join_group(all_links[index], members)
+        resolved = _resolve_axes(list(owners), all_links)
+        cross_grid: dict[tuple[Subplot, int], str] = {}
+        for index, groups in enumerate(resolved.links):
+            for number, group in enumerate(groups):
+                if resolved.axes[group[0]][index].kind == "category" and any(
+                    members.intersection(group) for members in report_links[index]
+                ):
+                    raise ValueError("report-level links require numeric or date axes")
+                if len({owners[subplot] for subplot in group}) > 1:
+                    cross_grid.update(((subplot, index), f"{index}-{number}") for subplot in group)
+
+        by_grid = {}
+        for grid in grids:
+            members = [placement.subplot for placement in grid._ordered_placements()]
+            links: tuple[list[tuple[Subplot, ...]], list[tuple[Subplot, ...]]] = ([], [])
+            for index, groups in enumerate(resolved.links):
+                for group in groups:
+                    local = tuple(subplot for subplot in group if owners[subplot] is grid)
+                    if len(local) > 1:
+                        links[index].append(local)
+            by_grid[grid] = _GridAxes({subplot: resolved.axes[subplot] for subplot in members}, links)
+        return by_grid, cross_grid
+
+    def html_resources(self, *, resources: Resources = "inline") -> str:
+        """Return the backend asset tags for use with resource-free HTML fragments."""
+        from plotski._report import html_resources
+
+        return html_resources(self.backend, resources)
+
+    def to_html_fragment(self, *, resources: Resources | None = "inline") -> str:
+        """Render an embeddable report, optionally using assets loaded by the host."""
+        from plotski._report import render_fragment
+
+        assets, fragment = render_fragment(self, resources)
+        return assets + fragment
+
     def to_html(self, *, resources: Resources = "inline") -> str:
         """Render a full HTML document with inline or CDN JavaScript resources."""
+        from plotski._report import render_fragment
+
         if resources not in ("inline", "cdn"):
             raise ValueError("resources must be 'inline' or 'cdn'")
-        if self.backend == "bokeh":
-            from plotski._bokeh import render_html as render_bokeh
+        assets, fragment = render_fragment(self, resources)
+        return (
+            '<!DOCTYPE html>\n<html lang="en"><head><meta charset="utf-8">\n'
+            '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+            f"<title>{escape(self.title)}</title>\n{assets}</head>\n<body>{fragment}</body></html>"
+        )
 
-            return render_bokeh(self, resources)
-        from plotski._plotly import render_html as render_plotly
-
-        return render_plotly(self, resources)
+    def _repr_html_(self) -> str:
+        """Display an isolated offline report in a trusted notebook."""
+        return (
+            f'<iframe title="{escape(self.title)}" sandbox="allow-scripts" '
+            f'style="border:0;width:100%;height:650px" srcdoc="{escape(self.to_html())}"></iframe>'
+        )
 
     def save(self, path: str | Path, *, show: bool = False, resources: Resources = "inline") -> Path:
         """Write the report to a UTF-8 HTML file and optionally open it."""
