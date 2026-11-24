@@ -1,5 +1,6 @@
 include LICENSE
-include README.rst
+include README.md
+include .pre-commit-config.yaml
 include AUTHORS.md
 include HISTORY.md
 include CONTRIBUTING.md
@@ -11,4 +12,3 @@ recursive-include tests *
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
 recursive-exclude docs *
-recursive-exclude misc *

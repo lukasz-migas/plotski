@@ -1,9 +1,8 @@
 # plotski
 
-[![PyPI](https://img.shields.io/pypi/v/plotski.svg)](https://pypi.python.org/pypi/plotski)
+[![PyPI](https://img.shields.io/pypi/v/plotski.svg)](https://pypi.org/project/plotski/)
 [![Docs](https://readthedocs.org/projects/plotski/badge/?version=latest)](https://plotski.readthedocs.io/en/latest/?version=latest)
-[![Updates](https://pyup.io/repos/github/lukasz-migas/plotski/shield.svg)](https://pyup.io/repos/github/lukasz-migas/plotski/)
-[![tests](https://github.com/lukasz-migas/plotski/actions/workflows/test_and_deploy.yml/badge.svg)](https://github.com/lukasz-migas/plotski/actions/workflows/test_and_deploy.yml)
+[![CI](https://github.com/lukasz-migas/plotski/actions/workflows/ci.yml/badge.svg)](https://github.com/lukasz-migas/plotski/actions/workflows/ci.yml)
 
 Plotski builds interactive HTML reports with Bokeh or Plotly. Add plots to
 tabs and subplot grids, layer scientific annotations, and link axes for
@@ -28,6 +27,9 @@ report.save("run-overview.html")
 Use `Figure(backend="plotly")` for Plotly reports. See the
 [usage guide](docs/usage.md) for charts, annotations, and native customization.
 Existing `PlotStore` and `CustomPlotStore` reports continue to use Bokeh.
+
+Generate the [example reports](examples/README.md) to try linked dates, point
+and table selection, and statistical comparisons in both backends.
 
 ## Licence
 Free software: MIT license

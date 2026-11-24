@@ -1,105 +1,58 @@
-.PHONY: clean clean-test clean-pyc clean-build docs help
+.PHONY: help clean clean-build clean-pyc clean-test lint format typecheck test test-all coverage docs servedocs dist install develop pre ruff
 .DEFAULT_GOAL := help
 
-define BROWSER_PYSCRIPT
-import os, webbrowser, sys
-
-from urllib.request import pathname2url
-
-webbrowser.open("file://" + pathname2url(os.path.abspath(sys.argv[1])))
-endef
-export BROWSER_PYSCRIPT
-
-define PRINT_HELP_PYSCRIPT
-import re, sys
-
-for line in sys.stdin:
-	match = re.match(r'^([a-zA-Z_-]+):.*?## (.*)$$', line)
-	if match:
-		target, help = match.groups()
-		print("%-20s %s" % (target, help))
-endef
-export PRINT_HELP_PYSCRIPT
-
-BROWSER := python -c "$$BROWSER_PYSCRIPT"
-
 help:
-	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
+	@awk -F ':.*## ' '/^[a-z-]+:.*## / { printf "%-20s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
 
-clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
+clean: clean-build clean-pyc clean-test ## remove build, test, coverage and Python artifacts
 
 clean-build: ## remove build artifacts
-	rm -fr build/
-	rm -fr dist/
-	rm -fr .eggs/
-	find . -name '*.egg-info' -exec rm -fr {} +
-	find . -name '*.egg' -exec rm -f {} +
+	rm -rf build/ dist/ .eggs/ src/*.egg-info
 
-clean-pyc: ## remove Python file artifacts
-	find . -name '*.pyc' -exec rm -f {} +
-	find . -name '*.pyo' -exec rm -f {} +
-	find . -name '*~' -exec rm -f {} +
-	find . -name '__pycache__' -exec rm -fr {} +
+clean-pyc: ## remove compiled Python files
+	find src tests -type d -name __pycache__ -prune -exec rm -rf {} +
 
 clean-test: ## remove test and coverage artifacts
-	rm -fr .tox/
-	rm -f .coverage
-	rm -fr htmlcov/
-	rm -fr .pytest_cache
+	rm -rf .coverage coverage.xml htmlcov/ .pytest_cache/
 
 lint: ## check style with Ruff
-	ruff check .
-	ruff format --check .
+	uv run --extra dev ruff check .
+	uv run --extra dev ruff format --check .
 
 format: ## auto-fix style issues with Ruff
-	ruff check --fix .
-	ruff format .
+	uv run --extra dev ruff check --fix .
+	uv run --extra dev ruff format .
 
-test: ## run tests quickly with the default Python
-	pytest
+typecheck: ## check types with mypy
+	uv run --extra dev mypy
 
-test-all: ## run tests on every Python version with tox
-	tox
+test: ## run tests with both plotting backends installed
+	uv run --extra test --extra plotly pytest
 
-coverage: ## check code coverage quickly with the default Python
-	coverage run --source src/annotine -m pytest
-	coverage report -m
-	coverage html
-	$(BROWSER) htmlcov/index.html
+test-all: ## run tests on each Python version in the CI matrix
+	@status=0; for version in 3.10 3.11 3.12 3.13; do \
+		uv run --isolated --python "$$version" --extra test --extra plotly pytest || status=1; \
+	done; exit "$$status"
 
-docs: ## generate Sphinx HTML documentation, including API docs
-	rm -f docs/annotine.rst
-	rm -f docs/modules.rst
-	sphinx-apidoc -o docs/ src/annotine
-	$(MAKE) -C docs clean
-	$(MAKE) -C docs html
-	$(BROWSER) docs/_build/html/index.html
+coverage: ## generate terminal and HTML coverage reports
+	uv run --extra test --extra plotly pytest --cov --cov-report=term-missing --cov-report=html
 
-servedocs: docs ## compile the docs watching for changes
-	watchmedo shell-command -p '*.rst' -c '$(MAKE) -C docs html' -R -D .
+docs: ## build the MkDocs documentation
+	uvx --python 3.12 --with-requirements requirements-docs.txt mkdocs build --strict
 
-release: dist ## package and upload a release
-	twine upload dist/*
+servedocs: ## preview the MkDocs documentation locally
+	uvx --python 3.12 --with-requirements requirements-docs.txt mkdocs serve
 
-dist: clean ## builds source and wheel package
-	python setup.py sdist
-	python setup.py bdist_wheel
-	ls -l dist
+dist: ## build the source distribution and wheel
+	uv build
 
-install: clean ## install the package to the active Python's site-packages
-	python setup.py install
+install: ## install the package into the project environment
+	uv sync --no-editable
 
-develop:
-	python setup.py develop
+develop: ## install the editable package and development tools
+	uv sync --extra dev --extra plotly
 
-pre:
-	pre-commit run -a
+pre: ## run all pre-commit hooks
+	uv run --extra dev pre-commit run --all-files
 
-ruff:
-	ruff check .
-	ruff format --check .
-
-untrack:
-	git rm -r --cached .
-	git add .
-	git commit -m ".gitignore fix"
+ruff: lint
