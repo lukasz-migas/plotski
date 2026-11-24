@@ -13,6 +13,7 @@ def test_supported_runtime_baselines_are_declared() -> None:
 
     assert 'requires-python = ">=3.10"' in pyproject_text
     assert '"numpy>=2"' in pyproject_text
+    assert '"bokeh>=3.1.0"' in pyproject_text
     assert 'target-version = "py310"' in pyproject_text
 
 

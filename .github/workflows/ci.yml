@@ -111,7 +111,7 @@ jobs:
           enable-cache: true
 
       - name: Install test dependencies
-        run: uv sync --no-dev --extra test
+        run: uv sync --no-dev --extra test --extra plotly
 
       - name: Test with coverage
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'

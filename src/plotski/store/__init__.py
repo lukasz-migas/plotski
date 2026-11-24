@@ -938,11 +938,9 @@ class PlotStore:
         plot.add_scatter(source, **kwargs)
 
     @staticmethod
-    def link_plots(plot_one: Plot, plot_two: Plot, x_axis: bool = False, y_axis: bool = False):
+    def link_plots(plot_one: Plot, plot_two: Plot, x_axis: bool = False, y_axis: bool = False) -> None:
         """Link the x/y-axis of two plots."""
-        if not x_axis and not y_axis:
-            return
-        if x_axis:
-            plot_two.figure.x_range = plot_one.figure.x_range
-        if y_axis:
-            plot_one.figure.y_range = plot_two.figure.y_range
+        x_range = plot_one.figure.x_range if x_axis else None
+        y_range = plot_two.figure.y_range if y_axis else None
+        plot_one.link_axes(x_range, y_range)
+        plot_two.link_axes(x_range, y_range)

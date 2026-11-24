@@ -5,50 +5,29 @@
 [![Updates](https://pyup.io/repos/github/lukasz-migas/plotski/shield.svg)](https://pyup.io/repos/github/lukasz-migas/plotski/)
 [![tests](https://github.com/lukasz-migas/plotski/actions/workflows/test_and_deploy.yml/badge.svg)](https://github.com/lukasz-migas/plotski/actions/workflows/test_and_deploy.yml)
 
-Package to generate easily generate interactive figures and export them to HTML documents.
+Plotski builds interactive HTML reports with Bokeh or Plotly. Add plots to
+tabs and subplot grids, layer scientific annotations, and link axes for
+synchronized navigation.
 
-The idea behind this package is to provide an easy-to-use interface to generate structured 
-HTML documents with interactive visualisations. The library is not meant to fill every gap
-but to provide several common plot types such as `line`, `scatter` or `image` type-plots and
-additional annotations and enable easy exportation to HTML document.
-
-All plots are generated using the excellent `bokeh` library.
-
-Supported runtime baseline:
-- Python 3.10+
-- NumPy 2+
-- pandas 2+ environments are supported, although `plotski` does not require pandas directly
-
-Typical usage might be
+Bokeh is included. Install `plotski[plotly]` to also use Plotly. Plotski
+supports Python 3.10+ and NumPy 2+.
 
 ```python
-import numpy as np
-from plotski import PlotStore
+from plotski import Figure
 
-x = np.arange(100)
-y = np.random.randint(0, 500, 100)
-
-store = PlotStore(
-    ".",  # this will save the plot to current working directory.
-)
-tab_name = store.add_tab("Random plot")
-# data is provided in dictionary. Data validation happens during plot generation
-store.plot_spectrum(tab_name, {"x": x, "y": y})
-# this will generate the HTML document (in memory using temporary file)
-store.show()
-# you can instead save to disk which will save the document to disk
-store.save()
+report = Figure(title="Run overview")
+grid = report.add_tab("Spectra").add_grid(rows=2, cols=1)
+sample = grid.add_subplot(title="Sample", x_label="m/z")
+reference = grid.add_subplot(title="Reference", x_label="m/z")
+sample.line([100, 101, 102], [4, 9, 1], label="Observed")
+reference.line([100, 101, 103], [2, 8, 0])
+grid.link_axes(sample, reference)
+report.save("run-overview.html")
 ```
 
-## Features
-
-
-## Planned
-
-* Improve generation of layouts.
-* Improve modification of plot parameters.
-* Add custom JS support.
-
+Use `Figure(backend="plotly")` for Plotly reports. See the
+[usage guide](docs/usage.md) for charts, annotations, and native customization.
+Existing `PlotStore` and `CustomPlotStore` reports continue to use Bokeh.
 
 ## Licence
 Free software: MIT license

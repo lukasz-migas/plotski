@@ -85,9 +85,9 @@ class PlotImageBase(Plot):
 
         # update x/y ranges
         src = self.source.data
-        if "x_range" not in self.kwargs:
+        if "x" not in self._linked_axes and "x_range" not in self.kwargs:
             self.figure.x_range.update(start=0, end=src["image"][0].shape[1])
-        if "y_range" not in self.kwargs:
+        if "y" not in self._linked_axes and "y_range" not in self.kwargs:
             self.figure.y_range.update(start=0, end=src["image"][0].shape[0])
         # x_range = self.kwargs.get("x_range", None)
         # if x_range is None:

@@ -72,7 +72,9 @@ class PlotScatter(Plot):
     def set_ranges(self, **kwargs):
         """Set x/y-axis ranges."""
         src = self.source.data
-        x_range = self.kwargs.get("x_range", (min(src["x"]), max(src["x"]) * 1.05))
-        y_range = self.kwargs.get("y_range", (min(src["y"]), max(src["y"]) * 1.05))
-        self.figure.x_range = Range1d(*x_range)
-        self.figure.y_range = Range1d(*y_range)
+        if "x" not in self._linked_axes:
+            x_range = self.kwargs.get("x_range", (min(src["x"]), max(src["x"]) * 1.05))
+            self.figure.x_range = Range1d(*x_range)
+        if "y" not in self._linked_axes:
+            y_range = self.kwargs.get("y_range", (min(src["y"]), max(src["y"]) * 1.05))
+            self.figure.y_range = Range1d(*y_range)
