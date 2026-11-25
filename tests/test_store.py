@@ -293,6 +293,24 @@ class TestPlotStore:
         assert isinstance(tabs, Tabs)
 
     @staticmethod
+    def test_layout_preserves_edited_title_and_linked_axes(make_store) -> None:
+        store = make_store()
+        _, _, first = store.plot_scatter("Plots", {"x": [0, 10], "y": [0, 15]})
+        _, _, second = store.plot_spectrum("Plots", {"x": [100, 120], "y": [30, 40]})
+        first.set_title("Edited scatter", bold=False)
+        second.set_title("Edited spectrum")
+        x_range, y_range = first.figure.x_range, second.figure.y_range
+        store.link_plots(first, second, x_axis=True, y_axis=True)
+
+        plots = store.get_layout().tabs[0].child.children
+        assert plots[0].children[0].text == "Edited scatter"
+        assert plots[1].children[0].text == "<b>Edited spectrum</b>"
+        assert first.figure.x_range is second.figure.x_range is x_range
+        assert first.figure.y_range is second.figure.y_range is y_range
+        assert (x_range.start, x_range.end) == (0, 10.5)
+        assert (y_range.start, y_range.end) == (30, 40)
+
+    @staticmethod
     def test_save(make_store):
         store = make_store()
         image = np.random.randint(0, 100, (10, 10))

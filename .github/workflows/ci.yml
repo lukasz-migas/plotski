@@ -74,7 +74,7 @@ jobs:
           enable-cache: true
 
       - name: Build distributions
-        run: uvx --from build pyproject-build --sdist --wheel --outdir dist
+        run: uv build
 
       - name: Check distributions
         run: uvx twine check --strict dist/*
@@ -111,11 +111,11 @@ jobs:
           enable-cache: true
 
       - name: Install test dependencies
-        run: uv sync --no-dev --extra test
+        run: uv sync --no-dev --extra test --extra plotly
 
       - name: Test with coverage
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        run: uv run --no-sync coverage run -m pytest -v --color=yes
+        run: uv run --no-sync pytest -v --color=yes --cov --cov-report=xml
 
       - name: Test
         if: matrix.os != 'ubuntu-latest' || matrix.python-version != '3.12'

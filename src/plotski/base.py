@@ -8,7 +8,7 @@ from collections.abc import Iterable
 import numpy as np
 from bokeh.io.export import get_layout_html
 from bokeh.layouts import column, row
-from bokeh.models import Band, BoxAnnotation, ColumnDataSource, Div, Glyph, LabelSet, Span
+from bokeh.models import Band, BoxAnnotation, ColumnDataSource, Div, Glyph, LabelSet, Range, Span
 from koyo.utilities import get_min_max
 
 from plotski.enums import Position
@@ -71,6 +71,7 @@ class Plot:
         self.div_header = kwargs.pop("header", "")
         self._div_header_pos: Position = kwargs.pop("header_pos", Position.ABOVE)
         self.div_footer = kwargs.pop("footer", "")
+        self._linked_axes: set[str] = set()
         self._x_extents: ty.List[float] = []
         self._y_extents: ty.List[float] = []
 
@@ -125,21 +126,21 @@ class Plot:
         self.figure.xaxis.axis_label = self.metadata["x_axis_label"]
         self.figure.yaxis.axis_label = self.metadata["y_axis_label"]
 
-    def set_title(self, text: str, bold: bool = True):
+    def set_title(self, text: str, bold: bool = True) -> None:
         """Set title text on the title div."""
-        if bold:
-            text = f"<b>{text}</b>"
-        self.div_title.text = text
+        self.div_title = text
+        self._title_bold = bold
 
     @property
-    def div_title(self):
+    def div_title(self) -> Div:
         """Return title."""
-        return Div(text=f"<b>{self._div_title}</b>")
+        return Div(text=f"<b>{self._div_title}</b>" if self._title_bold else self._div_title)
 
     @div_title.setter
-    def div_title(self, value: str):
+    def div_title(self, value: str) -> None:
         """Set title."""
         self._div_title = value
+        self._title_bold = True
 
     @property
     def div_header(self):
@@ -205,20 +206,14 @@ class Plot:
             self.set_ranges()
         return self._layout
 
-    def link_axes(self, x_range=None, y_range=None):
-        """Link x- and/or y-axis ranges to another plot.
-
-        It would appear as you can only link plots during creation and not after they've been rendered.
-        """
-        # if x_range:
-        #     if hasattr(x_range, "figure"):
-        #         x_range.figure.x_range = self.figure.x_range
-        #         # x_range = x_range.figure.x_range
-        #     # self.figure.x_range = x_range
-        # if y_range:
-        #     if hasattr(x_range, "figure"):
-        #         y_range = x_range.figure.y_range
-        #     self.figure.y_range = y_range
+    def link_axes(self, x_range: Range | None = None, y_range: Range | None = None) -> None:
+        """Use shared Bokeh ranges and preserve them when rebuilding the layout."""
+        if x_range is not None:
+            self.figure.x_range = x_range
+            self._linked_axes.add("x")
+        if y_range is not None:
+            self.figure.y_range = y_range
+            self._linked_axes.add("y")
 
     def add_extents(self, x: np.ndarray | None = None, y: np.ndarray | None = None):
         """Add x-axis extents."""

@@ -1,10 +1,4 @@
 repos:
-#-   repo: https://github.com/pre-commit/pre-commit-hooks
-#    rev: v4.4.0
-#    hooks:
-#    - id: no-commit-to-branch
-#      args: ['--branch', 'master', "--branch", "main"]
-
 -   repo: https://github.com/MarcoGorelli/absolufy-imports
     rev: v0.3.1
     hooks:
@@ -15,11 +9,11 @@ repos:
     hooks:
     -   id: ruff-check
         name: ruff-check
-        entry: ruff check --fix
+        entry: uv run --extra dev ruff check --fix
         language: system
         types: [python]
     -   id: ruff-format
         name: ruff-format
-        entry: ruff format
+        entry: uv run --extra dev ruff format
         language: system
         types: [python]

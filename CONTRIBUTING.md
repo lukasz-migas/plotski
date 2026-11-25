@@ -44,74 +44,34 @@ If you are proposing a feature:
 * Remember that this is a volunteer-driven project, and that contributions
   are welcome :)
 
-## Get Started!
+## Get started
 
-Ready to contribute? Here's how to set up `plotski` for local development.
+Fork and clone the repository, then use `uv` to set up an editable install.
 
-1. Fork the `plotski` repo on GitHub.
-2. Clone your fork locally:
-```
-git clone git@github.com:your_name_here/plotski.git
-```
-
-4. Install your local copy into a virtualenv. Assuming you have virtualenvwrapper installed, this is how you set up your fork for local development:
-
-```python
-mkvirtualenv plotski
-cd plotski/
-python setup.py develop
+```sh
+uv sync --extra dev --extra plotly
+uv run --extra dev ruff check .
+uv run --extra dev ruff format --check .
+uv run --extra test --extra plotly pytest
 ```
 
+For a specific Python version, run `uv run --python 3.12 --extra test --extra plotly pytest`.
+Use `make test-all` to run the suite in isolated environments for every Python
+version in the CI matrix. Use `make docs` to build the documentation and
+`make servedocs` to preview it.
 
-5. Create a branch for local development:
-```python
-git checkout -b name-of-your-bugfix-or-feature
-```
-   Now you can make your changes locally.
-
-6. When you're done making changes, check that your changes pass flake8 and the
-   tests, including testing other Python versions with tox:
-```python
-flake8 plotski tests
-python setup.py test or pytest
-tox
-```
-   To get flake8 and tox, just pip install them into your virtualenv.
-
-7. Commit your changes and push your branch to GitHub:
-
-```python
-git add .
-git commit -m "Your detailed description of your changes."
-git push origin name-of-your-bugfix-or-feature
-```
-
-8. Submit a pull request through the GitHub website.
-
-Pull Request Guidelines
------------------------
+## Pull request guidelines
 
 Before you submit a pull request, check that it meets these guidelines:
 
 1. The pull request should include tests.
 2. If the pull request adds functionality, the docs should be updated. Put
    your new functionality into a function with a docstring, and add the
-   feature to the list in README.rst.
-3. The pull request should work for Python 3.5, 3.6, 3.7 and 3.8, and for PyPy. Check
-   https://travis-ci.com/lukasz-migas/plotski/pull_requests
-   and make sure that the tests pass for all supported Python versions.
+   feature to the usage guide when relevant.
+3. Check that GitHub Actions passes for the supported Python versions.
 
-Tips
-----
+## Releases
 
-To run a subset of tests:
-```python
-pytest
-```
-
-Deploying
----------
-
-A reminder for the maintainers on how to deploy.
-Make sure all your changes are committed (including an entry in HISTORY.md).
+The GitHub Actions release workflow runs on tags that start with `v`.
+Use `uv build` to build the source distribution and wheel locally.
 

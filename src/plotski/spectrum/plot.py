@@ -92,9 +92,9 @@ class PlotSpectrum(Plot):
         """Set range based on data source."""
         # update x/y ranges
         x_min, x_max, y_min, y_max = self.get_extents(**kwargs)
-        if "x_range" not in self.kwargs:
+        if "x" not in self._linked_axes and "x_range" not in self.kwargs:
             self.figure.x_range.update(start=x_min, end=x_max)
-        if "y_range" not in self.kwargs:
+        if "y" not in self._linked_axes and "y_range" not in self.kwargs:
             self.figure.y_range.update(start=y_min, end=y_max)
 
     def add_plot_line(self, source: ColumnDataSource, **kwargs):
@@ -183,9 +183,9 @@ class PlotCentroid(PlotSpectrum):
         """Set ranges."""
         # update x/y ranges
         src = self.source.data
-        if "x_range" not in self.kwargs:
+        if "x" not in self._linked_axes and "x_range" not in self.kwargs:
             self.figure.x_range = Range1d(min(src["x"]), max(src["x"]))
-        if "y_range" not in self.kwargs:
+        if "y" not in self._linked_axes and "y_range" not in self.kwargs:
             self.figure.y_range = Range1d(min(src["y0"]), max(src["y1"]) * 1.05)
 
 
@@ -257,8 +257,10 @@ class PlotButterflySpectrum(PlotSpectrum):
         src = self.source.data
         x = [min(src["x_top"]), min(src["x_bottom"]), max(src["x_top"]), max(src["x_bottom"])]
         y = [min(src["y_top"]), min(src["y_bottom"]), max(src["y_top"]), max(src["y_bottom"])]
-        self.figure.x_range = Range1d(min(x), max(x))
-        self.figure.y_range = Range1d(min(y) * 1.05, max(y) * 1.05)
+        if "x" not in self._linked_axes:
+            self.figure.x_range = Range1d(min(x), max(x))
+        if "y" not in self._linked_axes:
+            self.figure.y_range = Range1d(min(y) * 1.05, max(y) * 1.05)
 
     def set_hover(self):
         """Set hover."""
@@ -332,8 +334,10 @@ class PlotMultiLine(PlotSpectrum):
         xmax = max([max(x) for x in src["xs"]])
         ymin = min([min(y) for y in src["ys"]])
         ymax = max([max(y) for y in src["ys"]])
-        self.figure.x_range.update(start=xmin, end=xmax)
-        self.figure.y_range.update(start=ymin, end=ymax)
+        if "x" not in self._linked_axes:
+            self.figure.x_range.update(start=xmin, end=xmax)
+        if "y" not in self._linked_axes:
+            self.figure.y_range.update(start=ymin, end=ymax)
         # x = [min(src["x_top"]), min(src["x_bottom"]), max(src["x_top"]), max(src["x_bottom"])]
         # y = [min(src["y_top"]), min(src["y_bottom"]), max(src["y_top"]), max(src["y_bottom"])]
         # self.figure.x_range = Range1d(min(x), max(x))
