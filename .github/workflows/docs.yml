@@ -23,7 +23,7 @@ jobs:
       - uses: actions/configure-pages@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: "3.15"
       - run: pip install '.[docs]'
       - run: zensical build --clean
       - uses: actions/upload-pages-artifact@v5
