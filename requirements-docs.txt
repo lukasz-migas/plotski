@@ -1,4 +1,4 @@
 mkdocs
 mkdocs-material
-markdown
+markdown==3.11.3
 markdown-changelog
