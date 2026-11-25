@@ -199,7 +199,6 @@ omit = ["*/__init__.py", "*/_version.py"]
 [tool.check-manifest]
 ignore = [
     "**/*_version.py",
-    ".readthedocs.yml",
     "Makefile",
     "renovate.json",
     "mkdocs.yml",

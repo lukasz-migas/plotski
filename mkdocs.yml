@@ -1,7 +1,8 @@
 site_name: Plotski
 site_author: Lukasz G. Migas
-site_description: Documentation of plotski library
+site_description: Interactive plotting and HTML reports with Bokeh and Plotly
 repo_url: https://github.com/lukasz-migas/plotski
+site_url: https://lukasz-migas.github.io/plotski/
 
 use_directory_urls: true
 
@@ -13,11 +14,9 @@ theme:
 
 extra_css: [css/style.css]
 
-markdown_extensions:
-    - changelog
-
 nav:
   - Home: index.md
   - Installation: installation.md
   - Usage: usage.md
-  - History: history.md
+  - Examples: examples.md
+  - Changelog: history.md

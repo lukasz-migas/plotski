@@ -37,11 +37,11 @@ test-all: ## run tests on each Python version in the CI matrix
 coverage: ## generate terminal and HTML coverage reports
 	uv run --extra test --extra plotly pytest --cov --cov-report=term-missing --cov-report=html
 
-docs: ## build the MkDocs documentation
-	uvx --python 3.12 --with-requirements requirements-docs.txt mkdocs build --strict
+docs: ## build the Zensical documentation
+	uvx --python 3.12 --with-requirements requirements-docs.txt zensical build --clean
 
-servedocs: ## preview the MkDocs documentation locally
-	uvx --python 3.12 --with-requirements requirements-docs.txt mkdocs serve
+servedocs: ## preview the Zensical documentation locally
+	uvx --python 3.12 --with-requirements requirements-docs.txt zensical serve
 
 dist: ## build the source distribution and wheel
 	uv build

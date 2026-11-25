@@ -1,5 +1,5 @@
 # Changelog
 
-;;VERv.0.1.0 (14/9/2021);;
+## 0.1.0 (2021-09-14)
 
-* ;;new;; Initial Release of `plotski`
+- Initial release.

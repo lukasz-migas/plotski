@@ -1,4 +1,1 @@
-mkdocs
-mkdocs-material
-markdown
-markdown-changelog
+zensical

@@ -1,7 +1,7 @@
 # plotski
 
 [![PyPI](https://img.shields.io/pypi/v/plotski.svg)](https://pypi.org/project/plotski/)
-[![Docs](https://readthedocs.org/projects/plotski/badge/?version=latest)](https://plotski.readthedocs.io/en/latest/?version=latest)
+[![Docs](https://github.com/lukasz-migas/plotski/actions/workflows/docs.yml/badge.svg)](https://lukasz-migas.github.io/plotski/)
 [![CI](https://github.com/lukasz-migas/plotski/actions/workflows/ci.yml/badge.svg)](https://github.com/lukasz-migas/plotski/actions/workflows/ci.yml)
 
 Plotski builds interactive HTML reports with Bokeh or Plotly. Add plots to
@@ -24,9 +24,10 @@ grid.link_axes(sample, reference)
 report.save("run-overview.html")
 ```
 
-Use `Figure(backend="plotly")` for Plotly reports. See the
-[usage guide](docs/usage.md) for charts, annotations, and native customization.
-Existing `PlotStore` and `CustomPlotStore` reports continue to use Bokeh.
+Use `Figure(backend="plotly")` for Plotly reports. The
+[documentation](https://lukasz-migas.github.io/plotski/) covers installation,
+chart types, scientific workflows, and image export. Existing `PlotStore` and
+`CustomPlotStore` reports continue to use Bokeh.
 
 Generate the [example reports](examples/README.md) to try linked dates, point
 and table selection, statistical comparisons, and mass spectra with ion images
@@ -34,6 +35,3 @@ in both backends.
 
 ## Licence
 Free software: MIT license
-
-## Documentation
-https://plotski.readthedocs.io
