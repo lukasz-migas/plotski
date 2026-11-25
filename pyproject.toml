@@ -56,6 +56,9 @@ plotly-export = [
     "plotly>=6.1.1",
     "kaleido>=1",
 ]
+docs = [
+    "zensical; python_version >= '3.11'",
+]
 test = [
     "pytest>=6.0",
     "pytest-cov",
@@ -202,6 +205,5 @@ ignore = [
     "Makefile",
     "renovate.json",
     "mkdocs.yml",
-    "requirements-docs.txt",
     "docs/*",
 ]

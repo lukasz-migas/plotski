@@ -38,10 +38,10 @@ coverage: ## generate terminal and HTML coverage reports
 	uv run --extra test --extra plotly pytest --cov --cov-report=term-missing --cov-report=html
 
 docs: ## build the Zensical documentation
-	uvx --python 3.12 --with-requirements requirements-docs.txt zensical build --clean
+	uv run --python 3.12 --extra docs zensical build --clean
 
 servedocs: ## preview the Zensical documentation locally
-	uvx --python 3.12 --with-requirements requirements-docs.txt zensical serve
+	uv run --python 3.12 --extra docs zensical serve
 
 dist: ## build the source distribution and wheel
 	uv build
