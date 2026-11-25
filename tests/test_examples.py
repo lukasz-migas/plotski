@@ -29,15 +29,19 @@ def test_generate_reports(backend: str, tmp_path: Path) -> None:
         text=True,
     )
     reports = {
-        "support-operations": ("Support operations", "Weekly trends", "Channel breakdown", "Channel totals"),
-        "packaging-trial": ("Packaging trial", "Parcel review", "Packing time", "Parcel inspection"),
+        "support-operations": ("Support operations", ["Weekly trends", "Channel breakdown"], "Channel totals"),
+        "packaging-trial": ("Packaging trial", ["Parcel review", "Packing time"], "Parcel inspection"),
+        "imaging-mass-spectrometry": (
+            "Imaging mass spectrometry",
+            ["Spectrum", "Ion images", "Region comparison"],
+            "Median pixel signals (a.u.)",
+        ),
     }
     assert {path.name for path in output.iterdir()} == {f"{name}-{backend}.html" for name in reports}
-    for name, (heading, first_tab, second_tab, table) in reports.items():
+    for name, (heading, tabs, table) in reports.items():
         html = (output / f"{name}-{backend}.html").read_text(encoding="utf-8")
         assert f"<h1>{heading}</h1>" in html
         assert f'data-backend="{backend}"' in html
-        assert f">{first_tab}</button>" in html
-        assert f">{second_tab}</button>" in html
+        assert all(f">{tab}</button>" in html for tab in tabs)
         assert f"<caption>{table}</caption>" in html
         assert "<script src=" not in html

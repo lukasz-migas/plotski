@@ -29,7 +29,8 @@ Use `Figure(backend="plotly")` for Plotly reports. See the
 Existing `PlotStore` and `CustomPlotStore` reports continue to use Bokeh.
 
 Generate the [example reports](examples/README.md) to try linked dates, point
-and table selection, and statistical comparisons in both backends.
+and table selection, statistical comparisons, and mass spectra with ion images
+in both backends.
 
 ## Licence
 Free software: MIT license

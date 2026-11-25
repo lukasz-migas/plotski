@@ -3,6 +3,7 @@
 import argparse
 from pathlib import Path
 
+import imaging_mass_spectrometry
 import packaging_trial
 import support_operations
 from _report_style import save_report
@@ -20,11 +21,16 @@ _REPORTS = (
         packaging_trial.build_report,
         "Compare material cost and packing time for two methods across 24 simulated parcels.",
     ),
+    (
+        "imaging-mass-spectrometry",
+        imaging_mass_spectrometry.build_report,
+        "Follow two simulated ion signals from a mass spectrum to spatial maps and compare their intensities by region.",
+    ),
 )
 
 
 def main() -> None:
-    """Generate both reports for the selected backend or backends."""
+    """Generate the example reports for the selected backend or backends."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--backend", choices=("bokeh", "plotly", "both"), default="both")
     parser.add_argument("--output-dir", type=Path, default=Path(__file__).resolve().parent / "output")
